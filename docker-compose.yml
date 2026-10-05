@@ -4,37 +4,37 @@ services:
   db:
     image: postgres:16
     container_name: rfi-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: rfi_user
       POSTGRES_PASSWORD: rfi_password
       POSTGRES_DB: rfi_db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5435:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   backend:
     build: ./backend
     container_name: rfi-backend
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8001:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://rfi_user:rfi_password@db:5432/rfi_db
     depends_on:
       - db
-    volumes:
-      - ./backend:/app
 
   frontend:
     build: ./frontend
     container_name: rfi-frontend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3200:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=/rfi-api
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
 
 volumes:
   pgdata:

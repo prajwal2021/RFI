@@ -1,4 +1,4 @@
-const API_BASE = "/api";
+const API_BASE = "/rfi-api";
 
 export interface RFIResponse {
   id: string;
