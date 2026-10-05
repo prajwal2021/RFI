@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RFI, fetchRFIs, deleteRFI } from "@/lib/api";
+import { RFI, fetchRFIs, deleteRFI, publishRFI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +21,9 @@ import {
   LayoutDashboard,
   Clock,
   Search,
+  Globe,
+  Copy,
+  Send,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -38,6 +41,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     loadRFIs();
@@ -61,6 +65,34 @@ export default function DashboardPage() {
     setRfis(rfis.filter((r) => r.id !== id));
   }
 
+  function handleCopyLink(rfi: RFI) {
+    if (rfi.publish_key) {
+      const url = `${window.location.origin}/rfi/public/${rfi.publish_key}`;
+      navigator.clipboard.writeText(url);
+      setCopiedId(rfi.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  }
+
+  async function handleQuickPublish(rfi: RFI) {
+    try {
+      const result = await publishRFI(rfi.id);
+      setRfis(
+        rfis.map((r) =>
+          r.id === rfi.id
+            ? { ...r, is_published: true, publish_key: result.publish_key, status: "open" as const }
+            : r
+        )
+      );
+      const url = `${window.location.origin}/rfi/public/${result.publish_key}`;
+      navigator.clipboard.writeText(url);
+      setCopiedId(rfi.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      alert("Failed to publish. Make sure the RFI has content.");
+    }
+  }
+
   const filteredRFIs = rfis.filter(
     (rfi) =>
       rfi.subject.toLowerCase().includes(search.toLowerCase()) ||
@@ -69,8 +101,8 @@ export default function DashboardPage() {
 
   const stats = {
     total: rfis.length,
+    published: rfis.filter((r) => r.is_published).length,
     draft: rfis.filter((r) => r.status === "draft").length,
-    open: rfis.filter((r) => r.status === "open").length,
     answered: rfis.filter((r) => r.status === "answered").length,
   };
 
@@ -90,7 +122,7 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card
             className="cursor-pointer hover:shadow-md transition-shadow border-2 border-dashed border-blue-200 bg-blue-50/50 hover:border-blue-400"
             onClick={() => router.push("/builder/new")}
@@ -101,7 +133,7 @@ export default function DashboardPage() {
               </div>
               <h3 className="font-semibold text-lg text-blue-900">Create New RFI</h3>
               <p className="text-sm text-blue-600 mt-1">
-                Design with drag & drop builder
+                Design with visual builder
               </p>
             </CardContent>
           </Card>
@@ -118,12 +150,22 @@ export default function DashboardPage() {
 
           <Card className="bg-white">
             <CardContent className="flex flex-col items-center justify-center py-8">
-              <div className="h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                <Clock className="h-7 w-7 text-amber-600" />
+              <div className="h-14 w-14 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+                <Globe className="h-7 w-7 text-purple-600" />
               </div>
-              <h3 className="font-semibold text-lg">Pending</h3>
+              <h3 className="font-semibold text-lg">Published</h3>
+              <p className="text-3xl font-bold text-purple-600 mt-1">{stats.published}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <div className="h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                <Send className="h-7 w-7 text-amber-600" />
+              </div>
+              <h3 className="font-semibold text-lg">Responses</h3>
               <p className="text-3xl font-bold text-amber-600 mt-1">
-                {stats.draft + stats.open}
+                {stats.answered}
               </p>
             </CardContent>
           </Card>
@@ -196,6 +238,12 @@ export default function DashboardPage() {
                         <Badge variant={STATUS_VARIANT[rfi.status]}>
                           {rfi.status}
                         </Badge>
+                        {rfi.is_published && (
+                          <Badge variant="open" className="bg-green-100 text-green-700 text-xs">
+                            <Globe className="h-3 w-3 mr-1" />
+                            Live
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>By {rfi.created_by}</span>
@@ -203,7 +251,30 @@ export default function DashboardPage() {
                         <span>{rfi.responses.length} response(s)</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {rfi.is_published && rfi.publish_key ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Copy public link"
+                          onClick={() => handleCopyLink(rfi)}
+                        >
+                          {copiedId === rfi.id ? (
+                            <span className="text-xs text-green-600 font-medium">Copied</span>
+                          ) : (
+                            <Copy className="h-4 w-4 text-green-600" />
+                          )}
+                        </Button>
+                      ) : rfi.content ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Publish"
+                          onClick={() => handleQuickPublish(rfi)}
+                        >
+                          <Globe className="h-4 w-4 text-gray-400" />
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon"

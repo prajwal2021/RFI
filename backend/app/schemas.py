@@ -46,8 +46,42 @@ class RFIOut(BaseModel):
     created_by: str
     assigned_to: str | None
     content: dict[str, Any] | None
+    is_published: bool
+    publish_key: str | None
     created_at: datetime
     updated_at: datetime
     responses: list[RFIResponseOut] = []
+
+    model_config = {"from_attributes": True}
+
+
+class RFIPublicOut(BaseModel):
+    subject: str
+    content: dict[str, Any] | None
+
+    model_config = {"from_attributes": True}
+
+
+class RFIPublishResult(BaseModel):
+    id: UUID
+    publish_key: str
+    is_published: bool
+
+    model_config = {"from_attributes": True}
+
+
+class SubmissionCreate(BaseModel):
+    data: dict[str, Any]
+    submitted_by_name: str | None = None
+    submitted_by_email: str | None = None
+
+
+class SubmissionOut(BaseModel):
+    id: UUID
+    rfi_id: UUID
+    data: dict[str, Any]
+    submitted_by_name: str | None
+    submitted_by_email: str | None
+    created_at: datetime
 
     model_config = {"from_attributes": True}
