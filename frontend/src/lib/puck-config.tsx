@@ -355,7 +355,7 @@ export const puckConfig: PuckConfig = {
               marginBottom: `${marginBottom}px`,
             }}
           >
-            {Array.from({ length: count }).map((_, i) => (
+            {Array.from({ length: count }).map((_: unknown, i: number) => (
               <DropZone key={i} zone={`column-${i}`} />
             ))}
           </div>
@@ -672,7 +672,7 @@ export const puckConfig: PuckConfig = {
               }}
             >
               <option value="">Select...</option>
-              {optionList.map((opt, i) => (
+              {optionList.map((opt: string, i: number) => (
                 <option key={i} value={opt}>
                   {opt}
                 </option>
@@ -715,7 +715,7 @@ export const puckConfig: PuckConfig = {
               {label}
             </label>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {optionList.map((opt, i) => (
+              {optionList.map((opt: string, i: number) => (
                 <label
                   key={i}
                   style={{
