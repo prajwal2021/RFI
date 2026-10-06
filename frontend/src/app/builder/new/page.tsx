@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { GrapesEditorRef } from "@/components/builder/editor";
@@ -18,7 +18,7 @@ const GrapesEditor = dynamic(() => import("@/components/builder/editor"), {
   ),
 });
 
-export default function NewBuilderPage() {
+function NewBuilderInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workspaceId = searchParams.get("workspace") || undefined;
@@ -92,5 +92,20 @@ export default function NewBuilderPage() {
         <GrapesEditor ref={editorRef} />
       </div>
     </div>
+  );
+}
+
+export default function NewBuilderPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-gray-900 text-gray-300">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gray-500 border-t-blue-500 mx-auto" />
+          <p>Loading Editor...</p>
+        </div>
+      </div>
+    }>
+      <NewBuilderInner />
+    </Suspense>
   );
 }
