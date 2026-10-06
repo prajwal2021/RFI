@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createRFI, updateRFI } from "@/lib/api";
 import { generateFormHTML, FormFieldDef, FormDef } from "./html-generator";
@@ -8,7 +8,7 @@ import {
   ArrowLeft, ChevronUp, ChevronDown, Trash2, Plus, X,
   Type, AlignLeft, Hash, Calendar, ChevronDownIcon, List,
   CheckSquare, CircleDot, Mail, Phone, Upload,
-  Heading1, Minus, GripVertical, Save, ExternalLink, Share2,
+  Heading1, Minus, GripVertical, Save, Image, Palette,
 } from "lucide-react";
 
 // ── Field type registry ──
@@ -55,7 +55,73 @@ function makeField(type: string, title: string): FormFieldDef {
     hidden: false,
     defaultValue: "",
     options: ft?.defaultOptions ? [...ft.defaultOptions] : [],
+    width: "full",
   };
+}
+
+const PRESET_COLORS = [
+  "#000000", "#374151", "#6b7280", "#ef4444", "#f97316", "#eab308",
+  "#22c55e", "#14b8a6", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899",
+  "#ffffff", "#f3f4f6", "#fef2f2", "#fff7ed", "#fefce8", "#f0fdf4",
+  "#f0fdfa", "#eff6ff", "#eef2ff", "#f5f3ff", "#fdf2f8", "#fdf4ff",
+];
+
+// ── Color Picker ──
+
+function ColorPicker({
+  value,
+  onChange,
+  label: labelText,
+}: {
+  value: string;
+  onChange: (color: string) => void;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <label className="block text-xs font-medium text-gray-500 mb-1">{labelText}</label>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full px-3 py-2 border border-gray-300 rounded-md text-sm hover:border-gray-400"
+      >
+        <div className="w-5 h-5 rounded border border-gray-300" style={{ backgroundColor: value || "transparent" }} />
+        <span className="text-gray-700">{value || "Default"}</span>
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 bg-white border rounded-lg shadow-lg p-3 w-[240px]">
+          <div className="grid grid-cols-6 gap-1.5 mb-2">
+            {PRESET_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => { onChange(c); setOpen(false); }}
+                className={`w-7 h-7 rounded border ${value === c ? "ring-2 ring-blue-500 ring-offset-1" : "border-gray-200 hover:border-gray-400"}`}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-2 pt-2 border-t">
+            <input
+              type="color"
+              value={value || "#000000"}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+            />
+            <input
+              type="text"
+              value={value || ""}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="#hex"
+              className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+            />
+            <button onClick={() => { onChange(""); setOpen(false); }} className="text-xs text-gray-500 hover:text-red-500">Clear</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Toggle switch ──
@@ -98,15 +164,12 @@ function NewFieldDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">New Field</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-5 w-5" />
           </button>
         </div>
-
-        {/* Body */}
         <div className="px-6 py-4 flex-1 overflow-y-auto">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
@@ -118,7 +181,6 @@ function NewFieldDialog({
               autoFocus
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Field Type</label>
             <div className="border rounded-md max-h-[320px] overflow-y-auto">
@@ -135,68 +197,64 @@ function NewFieldDialog({
             </div>
           </div>
         </div>
-
-        {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+          <button onClick={onClose} className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
           <button
-            onClick={onClose}
-            className="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              onAdd(selectedType, name);
-              setName("");
-              setSelectedType("text");
-              onClose();
-            }}
+            onClick={() => { onAdd(selectedType, name); setName(""); setSelectedType("text"); onClose(); }}
             className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-          >
-            Ok
-          </button>
+          >Ok</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ── Field Card in center panel ──
+// ── Field Card in center panel (with drag handle) ──
 
 function FieldCard({
   field,
   isSelected,
   onSelect,
-  onMoveUp,
-  onMoveDown,
   onRemove,
-  isFirst,
-  isLast,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  isDragOver,
 }: {
   field: FormFieldDef;
   isSelected: boolean;
   onSelect: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
   onRemove: () => void;
-  isFirst: boolean;
-  isLast: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+  isDragOver: boolean;
 }) {
+  const widthClass = field.width === "half" ? "w-[48%] inline-block align-top mr-[2%]" : field.width === "third" ? "w-[31.33%] inline-block align-top mr-[2%]" : "w-full";
+
+  const cardBase = `relative group my-1 py-3 px-4 rounded-md cursor-pointer transition ${widthClass}`;
+  const selectedStyle = isSelected ? "ring-2 ring-blue-500 bg-blue-50/30" : "hover:bg-gray-50";
+  const dragOverStyle = isDragOver ? "border-t-2 border-blue-500" : "";
+
   if (field.type === "divider") {
     return (
       <div
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
         onClick={onSelect}
-        className={`relative group my-2 py-3 px-4 rounded-md cursor-pointer transition ${isSelected ? "ring-2 ring-blue-500 bg-blue-50/30" : "hover:bg-gray-50"}`}
+        className={`${cardBase} ${selectedStyle} ${dragOverStyle}`}
       >
+        <div className="flex items-center gap-2">
+          <GripVertical className="h-4 w-4 text-gray-300 cursor-grab shrink-0 opacity-0 group-hover:opacity-100" />
+          <hr className="border-gray-300 flex-1" />
+        </div>
         {isSelected && (
-          <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-0.5">
-            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={isFirst} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={isLast} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
-          </div>
-        )}
-        <hr className="border-gray-300" />
-        {isSelected && (
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="absolute -right-10 top-1/2 -translate-y-1/2 p-1 text-red-400 hover:text-red-600">
+          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="absolute -right-8 top-1/2 -translate-y-1/2 p-1 text-red-400 hover:text-red-600">
             <Trash2 className="h-4 w-4" />
           </button>
         )}
@@ -207,19 +265,23 @@ function FieldCard({
   if (field.type === "heading") {
     return (
       <div
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
         onClick={onSelect}
-        className={`relative group my-2 py-3 px-4 rounded-md cursor-pointer transition ${isSelected ? "ring-2 ring-blue-500 bg-blue-50/30" : "hover:bg-gray-50"}`}
+        className={`${cardBase} ${selectedStyle} ${dragOverStyle}`}
       >
-        {isSelected && (
-          <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-0.5">
-            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={isFirst} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={isLast} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+        <div className="flex items-start gap-2">
+          <GripVertical className="h-4 w-4 text-gray-300 cursor-grab shrink-0 mt-1 opacity-0 group-hover:opacity-100" />
+          <div>
+            <h3 className="font-semibold" style={{ color: field.labelColor || "#1f2937" }}>{field.title || "Section Heading"}</h3>
+            {field.subtitle && <p className="text-xs text-gray-500 mt-0.5">{field.subtitle}</p>}
           </div>
-        )}
-        <h3 className="font-semibold text-gray-800">{field.title || "Section Heading"}</h3>
-        {field.subtitle && <p className="text-xs text-gray-500 mt-0.5">{field.subtitle}</p>}
+        </div>
         {isSelected && (
-          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="absolute -right-10 top-1/2 -translate-y-1/2 p-1 text-red-400 hover:text-red-600">
+          <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="absolute -right-8 top-1/2 -translate-y-1/2 p-1 text-red-400 hover:text-red-600">
             <Trash2 className="h-4 w-4" />
           </button>
         )}
@@ -227,76 +289,82 @@ function FieldCard({
     );
   }
 
+  const fieldBg = field.fieldBgColor || "#ffffff";
+  const borderColor = field.fieldBorderColor || "#d1d5db";
+  const inputPreviewStyle = { backgroundColor: fieldBg, borderColor };
+
   return (
     <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       onClick={onSelect}
-      className={`relative group my-2 py-3 px-4 rounded-md cursor-pointer transition ${isSelected ? "ring-2 ring-blue-500 bg-blue-50/30" : "hover:bg-gray-50"}`}
+      className={`${cardBase} ${selectedStyle} ${dragOverStyle}`}
     >
-      {isSelected && (
-        <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-0.5">
-          <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={isFirst} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-          <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={isLast} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
-        </div>
-      )}
+      <div className="flex items-start gap-2">
+        <GripVertical className="h-4 w-4 text-gray-300 cursor-grab shrink-0 mt-1 opacity-0 group-hover:opacity-100" />
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm mb-2" style={{ color: field.labelColor || "#1f2937" }}>
+            {field.title}
+            {field.required && <span className="text-red-500 ml-1">*</span>}
+          </div>
 
-      <div className="font-medium text-sm text-gray-800 mb-2">
-        {field.title}
-        {field.required && <span className="text-red-500 ml-1">*</span>}
+          {(field.type === "text" || field.type === "email" || field.type === "phone" || field.type === "number") && (
+            <div className="h-9 rounded-md border px-3 flex items-center text-sm text-gray-400" style={inputPreviewStyle}>
+              {field.defaultValue || ""}
+            </div>
+          )}
+          {field.type === "multiline" && (
+            <div className="h-20 rounded-md border px-3 pt-2 text-sm text-gray-400" style={inputPreviewStyle}>
+              {field.defaultValue || ""}
+            </div>
+          )}
+          {field.type === "date" && (
+            <div className="h-9 rounded-md border px-3 flex items-center justify-between text-sm text-gray-400" style={inputPreviewStyle}>
+              <span>{field.defaultValue || "mm/dd/yyyy"}</span>
+              <Calendar className="h-4 w-4" />
+            </div>
+          )}
+          {field.type === "dropdown" && (
+            <div className="h-9 rounded-md border px-3 flex items-center justify-between text-sm text-gray-400" style={inputPreviewStyle}>
+              <span>Select...</span>
+              <ChevronDownIcon className="h-4 w-4" />
+            </div>
+          )}
+          {field.type === "checkbox" && (
+            <div className="space-y-1.5">
+              {field.options.slice(0, 3).map((opt, i) => (
+                <label key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="h-4 w-4 rounded border" style={{ borderColor, backgroundColor: fieldBg }} />
+                  {opt}
+                </label>
+              ))}
+              {field.options.length > 3 && <p className="text-xs text-gray-400">+{field.options.length - 3} more</p>}
+            </div>
+          )}
+          {field.type === "radio" && (
+            <div className="space-y-1.5">
+              {field.options.slice(0, 3).map((opt, i) => (
+                <label key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="h-4 w-4 rounded-full border" style={{ borderColor, backgroundColor: fieldBg }} />
+                  {opt}
+                </label>
+              ))}
+              {field.options.length > 3 && <p className="text-xs text-gray-400">+{field.options.length - 3} more</p>}
+            </div>
+          )}
+          {field.type === "file" && (
+            <div className="h-9 rounded-md border border-dashed px-3 flex items-center gap-2 text-sm text-gray-400" style={inputPreviewStyle}>
+              <Upload className="h-4 w-4" /> Choose file...
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Input preview */}
-      {(field.type === "text" || field.type === "email" || field.type === "phone" || field.type === "number") && (
-        <div className="h-9 rounded-md border border-gray-300 bg-white px-3 flex items-center text-sm text-gray-400">
-          {field.defaultValue || ""}
-        </div>
-      )}
-      {field.type === "multiline" && (
-        <div className="h-20 rounded-md border border-gray-300 bg-white px-3 pt-2 text-sm text-gray-400">
-          {field.defaultValue || ""}
-        </div>
-      )}
-      {field.type === "date" && (
-        <div className="h-9 rounded-md border border-gray-300 bg-white px-3 flex items-center justify-between text-sm text-gray-400">
-          <span>{field.defaultValue || "mm/dd/yyyy"}</span>
-          <Calendar className="h-4 w-4" />
-        </div>
-      )}
-      {field.type === "dropdown" && (
-        <div className="h-9 rounded-md border border-gray-300 bg-white px-3 flex items-center justify-between text-sm text-gray-400">
-          <span>Select...</span>
-          <ChevronDownIcon className="h-4 w-4" />
-        </div>
-      )}
-      {field.type === "checkbox" && (
-        <div className="space-y-1.5">
-          {field.options.slice(0, 3).map((opt, i) => (
-            <label key={i} className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="h-4 w-4 rounded border border-gray-300 bg-white" />
-              {opt}
-            </label>
-          ))}
-          {field.options.length > 3 && <p className="text-xs text-gray-400">+{field.options.length - 3} more</p>}
-        </div>
-      )}
-      {field.type === "radio" && (
-        <div className="space-y-1.5">
-          {field.options.slice(0, 3).map((opt, i) => (
-            <label key={i} className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="h-4 w-4 rounded-full border border-gray-300 bg-white" />
-              {opt}
-            </label>
-          ))}
-          {field.options.length > 3 && <p className="text-xs text-gray-400">+{field.options.length - 3} more</p>}
-        </div>
-      )}
-      {field.type === "file" && (
-        <div className="h-9 rounded-md border border-dashed border-gray-300 bg-white px-3 flex items-center gap-2 text-sm text-gray-400">
-          <Upload className="h-4 w-4" /> Choose file...
-        </div>
-      )}
-
       {isSelected && (
-        <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="absolute -right-10 top-1/2 -translate-y-1/2 p-1 text-red-400 hover:text-red-600">
+        <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="absolute -right-8 top-1/2 -translate-y-1/2 p-1 text-red-400 hover:text-red-600">
           <Trash2 className="h-4 w-4" />
         </button>
       )}
@@ -366,9 +434,46 @@ function FieldEditor({
 
       <hr className="border-gray-200" />
 
+      {/* Width */}
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1">Field Width</label>
+        <div className="flex gap-1">
+          {([["full", "Full"], ["half", "1/2"], ["third", "1/3"]] as const).map(([w, lbl]) => (
+            <button
+              key={w}
+              onClick={() => onChange({ width: w })}
+              className={`flex-1 py-1.5 text-xs font-medium rounded border ${(field.width || "full") === w ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+            >
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <hr className="border-gray-200" />
+
       {/* Toggles */}
       <Toggle checked={field.required} onChange={(v) => onChange({ required: v })} label="Required" />
       <Toggle checked={field.hidden} onChange={(v) => onChange({ hidden: v })} label="Hidden" />
+
+      <hr className="border-gray-200" />
+
+      {/* Colors */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-3">
+          <Palette className="h-4 w-4 text-gray-400" />
+          <span className="text-sm font-medium text-gray-700">Colors</span>
+        </div>
+        <div className="space-y-3">
+          <ColorPicker label="Label Color" value={field.labelColor || ""} onChange={(c) => onChange({ labelColor: c })} />
+          {field.type !== "heading" && field.type !== "divider" && (
+            <>
+              <ColorPicker label="Field Background" value={field.fieldBgColor || ""} onChange={(c) => onChange({ fieldBgColor: c })} />
+              <ColorPicker label="Field Border" value={field.fieldBorderColor || ""} onChange={(c) => onChange({ fieldBorderColor: c })} />
+            </>
+          )}
+        </div>
+      </div>
 
       <hr className="border-gray-200" />
 
@@ -424,10 +529,7 @@ function FieldEditor({
                   className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
-                  onClick={() => {
-                    const newOpts = field.options.filter((_, j) => j !== i);
-                    onChange({ options: newOpts });
-                  }}
+                  onClick={() => onChange({ options: field.options.filter((_, j) => j !== i) })}
                   className="text-gray-400 hover:text-red-500 shrink-0"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -468,6 +570,17 @@ export default function FormBuilder({
   const [activeTab, setActiveTab] = useState<"form" | "settings">("form");
   const [editingTitle, setEditingTitle] = useState(false);
 
+  // Form-level style settings
+  const [backgroundColor, setBackgroundColor] = useState(initialForm?.backgroundColor || "");
+  const [backgroundImage, setBackgroundImage] = useState(initialForm?.backgroundImage || "");
+  const [headerColor, setHeaderColor] = useState(initialForm?.headerColor || "");
+  const [headerBgColor, setHeaderBgColor] = useState(initialForm?.headerBgColor || "");
+  const [formBgColor, setFormBgColor] = useState(initialForm?.formBgColor || "");
+
+  // DnD state
+  const dragIdx = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
   const selectedField = fields.find((f) => f.id === selectedId) || null;
 
   const addField = (type: string, name: string) => {
@@ -491,23 +604,44 @@ export default function FormBuilder({
     if (selectedId === id) setSelectedId(null);
   };
 
-  const moveField = (id: string, dir: "up" | "down") => {
-    const idx = fields.findIndex((f) => f.id === id);
-    if (dir === "up" && idx > 0) {
-      const next = [...fields];
-      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-      setFields(next);
-    } else if (dir === "down" && idx < fields.length - 1) {
-      const next = [...fields];
-      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-      setFields(next);
+  const handleDragStart = useCallback((idx: number) => {
+    dragIdx.current = idx;
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    setDragOverIdx(idx);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, dropIdx: number) => {
+    e.preventDefault();
+    const from = dragIdx.current;
+    if (from === null || from === dropIdx) {
+      setDragOverIdx(null);
+      return;
     }
-  };
+    setFields((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(dropIdx > from ? dropIdx - 1 : dropIdx, 0, moved);
+      return next;
+    });
+    dragIdx.current = null;
+    setDragOverIdx(null);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    dragIdx.current = null;
+    setDragOverIdx(null);
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const formDef: FormDef = { title, description, fields };
+      const formDef: FormDef = {
+        title, description, fields,
+        backgroundColor, backgroundImage, headerColor, headerBgColor, formBgColor,
+      };
       const { html, css } = generateFormHTML(formDef);
       const content = { formDefinition: formDef, html, css, projectData: {} };
 
@@ -532,7 +666,7 @@ export default function FormBuilder({
 
   return (
     <div className="h-screen flex flex-col bg-[#f0f0f0]">
-      {/* ── Top Bar (Smartsheet style - dark) ── */}
+      {/* ── Top Bar ── */}
       <header className="h-12 bg-[#2d2d2d] text-white flex items-center px-4 shrink-0 z-20">
         <button onClick={() => router.push("/")} className="p-1 hover:bg-white/10 rounded mr-3">
           <ArrowLeft className="h-4 w-4" />
@@ -553,7 +687,6 @@ export default function FormBuilder({
           </button>
         )}
 
-        {/* Form / Settings tabs */}
         <div className="flex ml-8 gap-0.5">
           <button
             onClick={() => setActiveTab("form")}
@@ -571,7 +704,6 @@ export default function FormBuilder({
 
         <div className="flex-1" />
 
-        {/* Action buttons */}
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
@@ -591,16 +723,11 @@ export default function FormBuilder({
           <div className="p-4 border-b">
             <h3 className="text-base font-semibold text-gray-900 mb-1">Fields</h3>
             <p className="text-xs text-gray-500 mb-3">
-              Add fields to your form. Each field collects one piece of information.
+              Drag fields in the center to reorder. Click a field to edit properties.
             </p>
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  if (confirm("Remove all fields from the form?")) {
-                    setFields([]);
-                    setSelectedId(null);
-                  }
-                }}
+                onClick={() => { if (confirm("Remove all fields from the form?")) { setFields([]); setSelectedId(null); } }}
                 className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
               >
                 Remove All
@@ -614,7 +741,6 @@ export default function FormBuilder({
             </div>
           </div>
 
-          {/* Added fields list */}
           <div className="flex-1 overflow-y-auto p-3">
             {fields.map((f) => (
               <button
@@ -624,16 +750,16 @@ export default function FormBuilder({
               >
                 <span className="text-gray-400 shrink-0">{getFieldIcon(f.type)}</span>
                 <span className="truncate">{f.title || getFieldLabel(f.type)}</span>
+                {f.width && f.width !== "full" && (
+                  <span className="ml-auto text-[10px] text-gray-400 shrink-0">{f.width === "half" ? "1/2" : "1/3"}</span>
+                )}
               </button>
             ))}
             {fields.length === 0 && (
-              <div className="text-center py-8 text-xs text-gray-400">
-                No fields added yet
-              </div>
+              <div className="text-center py-8 text-xs text-gray-400">No fields added yet</div>
             )}
           </div>
 
-          {/* Form Elements section */}
           <div className="border-t p-4">
             <h4 className="text-sm font-semibold text-gray-900 mb-2">Form Elements</h4>
             {FIELD_TYPES.filter((ft) => ft.category === "element").map((ft) => (
@@ -650,16 +776,32 @@ export default function FormBuilder({
         </aside>
 
         {/* ── Center Panel ── */}
-        <main className="flex-1 overflow-y-auto p-8" onClick={() => setSelectedId(null)}>
+        <main
+          className="flex-1 overflow-y-auto p-8"
+          style={{
+            backgroundColor: backgroundColor || "#f0f0f0",
+            backgroundImage: backgroundImage ? `url('${backgroundImage}')` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          onClick={() => setSelectedId(null)}
+        >
           {activeTab === "form" ? (
             <div className="max-w-[700px] mx-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="bg-white rounded-lg shadow-sm border">
-                {/* Form header area */}
-                <div className="px-8 pt-8 pb-4">
+              <div
+                className="rounded-lg shadow-sm border"
+                style={{ backgroundColor: formBgColor || "#ffffff" }}
+              >
+                {/* Header area */}
+                <div
+                  className="px-8 pt-8 pb-4 rounded-t-lg"
+                  style={headerBgColor ? { backgroundColor: headerBgColor } : undefined}
+                >
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="text-2xl font-bold text-gray-900 w-full outline-none border-b-2 border-transparent focus:border-blue-500 pb-1"
+                    className="text-2xl font-bold w-full outline-none border-b-2 border-transparent focus:border-blue-500 pb-1 bg-transparent"
+                    style={{ color: headerColor || "#111827" }}
                     placeholder="Form Title"
                   />
                   <textarea
@@ -667,23 +809,24 @@ export default function FormBuilder({
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Add a description..."
                     rows={2}
-                    className="w-full mt-2 text-sm text-gray-500 outline-none resize-none"
+                    className="w-full mt-2 text-sm text-gray-500 outline-none resize-none bg-transparent"
                   />
                 </div>
 
-                {/* Fields */}
-                <div className="px-8 pb-8 pl-16 pr-16">
+                {/* Fields with drag-and-drop */}
+                <div className="px-8 pb-8 pl-12 pr-16">
                   {fields.map((field, idx) => (
                     <FieldCard
                       key={field.id}
                       field={field}
                       isSelected={selectedId === field.id}
                       onSelect={() => setSelectedId(field.id)}
-                      onMoveUp={() => moveField(field.id, "up")}
-                      onMoveDown={() => moveField(field.id, "down")}
                       onRemove={() => removeField(field.id)}
-                      isFirst={idx === 0}
-                      isLast={idx === fields.length - 1}
+                      onDragStart={() => handleDragStart(idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      isDragOver={dragOverIdx === idx}
                     />
                   ))}
                   {fields.length === 0 && (
@@ -697,9 +840,9 @@ export default function FormBuilder({
             </div>
           ) : (
             /* Settings tab */
-            <div className="max-w-[500px] mx-auto bg-white rounded-lg shadow-sm border p-6" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Form Settings</h3>
-              <div className="space-y-4">
+            <div className="max-w-[540px] mx-auto bg-white rounded-lg shadow-sm border p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-5">Form Settings</h3>
+              <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Form Title</label>
                   <input
@@ -717,11 +860,55 @@ export default function FormBuilder({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 </div>
-                <Toggle
-                  checked={false}
-                  onChange={() => {}}
-                  label="Do not show title and description"
-                />
+
+                <hr className="border-gray-200" />
+
+                {/* Background Image */}
+                <div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Image className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700">Background Image</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={backgroundImage}
+                    onChange={(e) => setBackgroundImage(e.target.value)}
+                    placeholder="Paste an image URL (https://...)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {backgroundImage && (
+                    <div className="mt-2 relative rounded-md overflow-hidden border h-32">
+                      <img
+                        src={backgroundImage}
+                        alt="Background preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                      <button
+                        onClick={() => setBackgroundImage("")}
+                        className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <hr className="border-gray-200" />
+
+                {/* Form Colors */}
+                <div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Palette className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700">Form Colors</span>
+                  </div>
+                  <div className="space-y-3">
+                    <ColorPicker label="Page Background" value={backgroundColor} onChange={setBackgroundColor} />
+                    <ColorPicker label="Form Background" value={formBgColor} onChange={setFormBgColor} />
+                    <ColorPicker label="Header Background" value={headerBgColor} onChange={setHeaderBgColor} />
+                    <ColorPicker label="Title Color" value={headerColor} onChange={setHeaderColor} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -743,12 +930,7 @@ export default function FormBuilder({
         </aside>
       </div>
 
-      {/* New Field Dialog */}
-      <NewFieldDialog
-        open={showNewField}
-        onClose={() => setShowNewField(false)}
-        onAdd={addField}
-      />
+      <NewFieldDialog open={showNewField} onClose={() => setShowNewField(false)} onAdd={addField} />
     </div>
   );
 }
