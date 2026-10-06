@@ -1,9 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { fetchRFI, fetchSubmissions, RFI, Submission } from "@/lib/api";
 import { format } from "date-fns";
+
+function extractFormFields(html: string): { name: string; label: string }[] {
+  if (typeof window === "undefined" || !html) return [];
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const fields: { name: string; label: string }[] = [];
+  const seen = new Set<string>();
+
+  doc.querySelectorAll("input, textarea, select").forEach((el) => {
+    const input = el as HTMLInputElement;
+    const name = input.name || input.id || "";
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+
+    let label = "";
+    const wrapper = el.closest("label");
+    if (wrapper) {
+      const clone = wrapper.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("input, textarea, select, span").forEach((c) => c.remove());
+      label = clone.textContent?.trim() || "";
+    }
+    if (!label) {
+      const parent = el.closest("div, section, fieldset");
+      if (parent) {
+        const lbl = parent.querySelector("label");
+        if (lbl && !lbl.querySelector("input, textarea, select")) {
+          label = lbl.textContent?.trim().replace(/\s*\*\s*$/, "") || "";
+        }
+      }
+    }
+    if (!label) {
+      label = name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    fields.push({ name, label });
+  });
+
+  return fields;
+}
+
+function formatKey(key: string): string {
+  if (/[a-z]_[a-z]/.test(key)) {
+    return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return key;
+}
+
+function formatValue(value: any): string {
+  if (value === null || value === undefined) return "—";
+  if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "—";
+  const str = String(value);
+  return str.trim() === "" ? "—" : str;
+}
 
 export default function SubmissionsPage() {
   const params = useParams();
@@ -34,6 +86,38 @@ export default function SubmissionsPage() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  const formFields = useMemo(
+    () => extractFormFields(rfi?.content?.html || ""),
+    [rfi?.content?.html]
+  );
+
+  const getFieldRows = (data: Record<string, any>) => {
+    if (formFields.length === 0) {
+      return Object.entries(data).map(([key, value]) => ({
+        label: formatKey(key),
+        value: formatValue(value),
+      }));
+    }
+
+    const rows: { label: string; value: string }[] = [];
+    const matched = new Set<string>();
+
+    for (const field of formFields) {
+      const val = data[field.name] ?? data[field.label] ?? undefined;
+      rows.push({ label: field.label, value: formatValue(val) });
+      matched.add(field.name);
+      matched.add(field.label);
+    }
+
+    for (const [key, value] of Object.entries(data)) {
+      if (!matched.has(key)) {
+        rows.push({ label: formatKey(key), value: formatValue(value) });
+      }
+    }
+
+    return rows;
+  };
 
   if (loading) {
     return (
@@ -68,7 +152,6 @@ export default function SubmissionsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between">
@@ -96,7 +179,6 @@ export default function SubmissionsPage() {
         </div>
       </header>
 
-      {/* Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {submissions.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border p-16 text-center">
@@ -129,60 +211,56 @@ export default function SubmissionsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {submissions.map((sub, idx) => (
-              <div
-                key={sub.id}
-                className="bg-white rounded-xl shadow-sm border overflow-hidden"
-              >
-                {/* Submission header */}
-                <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
-                      #{submissions.length - idx}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {sub.submitted_by_name || "Anonymous"}
+            {submissions.map((sub, idx) => {
+              const rows = getFieldRows(sub.data);
+              return (
+                <div
+                  key={sub.id}
+                  className="bg-white rounded-xl shadow-sm border overflow-hidden"
+                >
+                  <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
+                        #{submissions.length - idx}
                       </div>
-                      {sub.submitted_by_email && (
-                        <div className="text-xs text-gray-500">
-                          {sub.submitted_by_email}
+                      <div>
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {sub.submitted_by_name || "Anonymous"}
                         </div>
-                      )}
+                        {sub.submitted_by_email && (
+                          <div className="text-xs text-gray-500">
+                            {sub.submitted_by_email}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    <span className="text-xs text-gray-400">
+                      {format(new Date(sub.created_at), "MMM d, yyyy 'at' h:mm a")}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-400">
-                    {format(new Date(sub.created_at), "MMM d, yyyy 'at' h:mm a")}
-                  </span>
-                </div>
 
-                {/* Submission data */}
-                <div className="px-6 py-4">
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {Object.entries(sub.data).map(([key, value]) => {
-                        const displayValue = Array.isArray(value)
-                          ? value.join(", ")
-                          : String(value || "—");
-                        return (
+                  <div className="px-6 py-4">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {rows.map((row, i) => (
                           <tr
-                            key={key}
+                            key={i}
                             className="border-b border-gray-100 last:border-0"
                           >
-                            <td className="py-3 pr-6 font-medium text-gray-600 align-top w-1/3 whitespace-nowrap">
-                              {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                            <td className="py-3 pr-6 font-medium text-gray-600 align-top w-1/3">
+                              {row.label}
                             </td>
                             <td className="py-3 text-gray-900 whitespace-pre-wrap">
-                              {displayValue}
+                              {row.value}
                             </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

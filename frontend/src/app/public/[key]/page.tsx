@@ -24,6 +24,30 @@ export default function PublicFormPage() {
       .finally(() => setLoading(false));
   }, [key]);
 
+  const findLabel = (el: Element): string => {
+    const wrapper = el.closest("label");
+    if (wrapper) {
+      const clone = wrapper.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("input, textarea, select, span").forEach((c) => c.remove());
+      const text = clone.textContent?.trim();
+      if (text) return text;
+    }
+    const id = (el as HTMLInputElement).id;
+    if (id) {
+      const explicit = containerRef.current?.querySelector(`label[for="${id}"]`);
+      if (explicit?.textContent?.trim()) return explicit.textContent.trim();
+    }
+    const parent = el.closest("div, section, fieldset");
+    if (parent) {
+      const label = parent.querySelector("label");
+      if (label && !label.querySelector("input, textarea, select")) {
+        const text = label.textContent?.trim().replace(/\s*\*\s*$/, "");
+        if (text) return text;
+      }
+    }
+    return "";
+  };
+
   const handleSubmit = async () => {
     if (!containerRef.current) return;
     setSubmitting(true);
@@ -34,27 +58,34 @@ export default function PublicFormPage() {
     );
     let fieldIndex = 0;
 
+    const seenRadioGroups = new Set<string>();
+
     inputs.forEach((el) => {
       const input = el as HTMLInputElement;
-      const fieldName =
+      const rawName =
         input.name || input.id || input.placeholder || `field_${fieldIndex++}`;
+      const label = findLabel(el) || rawName.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
       if (input.type === "checkbox") {
-        if (!data[fieldName]) data[fieldName] = [];
-        if (input.checked) (data[fieldName] as string[]).push(input.value || "on");
+        if (!data[label]) data[label] = [];
+        if (input.checked) (data[label] as string[]).push(input.value || "on");
       } else if (input.type === "radio") {
-        if (input.checked) data[fieldName] = input.value;
-      } else if (input.type === "file") {
-        if (input.files?.length) {
-          data[fieldName] = Array.from(input.files).map((f) => f.name);
+        if (!seenRadioGroups.has(rawName)) {
+          seenRadioGroups.add(rawName);
+          data[label] = "";
         }
+        if (input.checked) data[label] = input.value;
+      } else if (input.type === "file") {
+        data[label] = input.files?.length
+          ? Array.from(input.files).map((f) => f.name)
+          : "";
       } else if (el.tagName === "SELECT") {
         const select = el as HTMLSelectElement;
-        data[fieldName] = select.value;
+        data[label] = select.value;
       } else if (el.tagName === "TEXTAREA") {
-        data[fieldName] = (el as HTMLTextAreaElement).value;
+        data[label] = (el as HTMLTextAreaElement).value;
       } else {
-        data[fieldName] = input.value;
+        data[label] = input.value;
       }
     });
 
