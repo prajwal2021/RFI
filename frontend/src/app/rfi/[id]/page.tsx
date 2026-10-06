@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { fetchRFI, fetchSubmissions, publishRFI, unpublishRFI, RFI, Submission } from "@/lib/api";
+import { fetchRFI, fetchSubmissions, publishRFI, unpublishRFI, RFI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Pencil, Globe, GlobeLock, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Pencil, Globe, GlobeLock, Copy, ExternalLink, FileText } from "lucide-react";
 import { format } from "date-fns";
 
 const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> = {
@@ -21,11 +21,10 @@ export default function ViewRFIPage() {
   const id = params.id as string;
 
   const [rfi, setRfi] = useState<RFI | null>(null);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"preview" | "submissions">("preview");
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [submissionCount, setSubmissionCount] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -34,7 +33,7 @@ export default function ViewRFIPage() {
         setRfi(data);
         if (data.is_published) {
           const subs = await fetchSubmissions(id);
-          setSubmissions(subs);
+          setSubmissionCount(subs.length);
         }
       } catch {
         alert("Failed to load RFI");
@@ -82,6 +81,10 @@ export default function ViewRFIPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const openSubmissions = () => {
+    window.open(`${window.location.origin}/rfi/rfi/${id}/submissions`, "_blank");
   };
 
   if (loading) {
@@ -156,6 +159,19 @@ export default function ViewRFIPage() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={openSubmissions}
+              >
+                <FileText className="h-4 w-4 mr-1" />
+                Responses
+                {submissionCount > 0 && (
+                  <span className="ml-1 rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-semibold">
+                    {submissionCount}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => router.push(`/builder/${rfi.id}`)}
               >
                 <Pencil className="h-4 w-4 mr-2" />
@@ -166,127 +182,26 @@ export default function ViewRFIPage() {
         </div>
       </header>
 
-      {/* Tab Bar */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-6">
-            <button
-              className={`py-3 text-sm font-medium border-b-2 transition ${
-                activeTab === "preview"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-              onClick={() => setActiveTab("preview")}
-            >
-              Preview
-            </button>
-            <button
-              className={`py-3 text-sm font-medium border-b-2 transition flex items-center gap-2 ${
-                activeTab === "submissions"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-              onClick={async () => {
-                setActiveTab("submissions");
-                const subs = await fetchSubmissions(id);
-                setSubmissions(subs);
-              }}
-            >
-              Submissions
-              {submissions.length > 0 && (
-                <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-semibold">
-                  {submissions.length}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
+      {/* Preview Content */}
       <main className="py-8">
-        {activeTab === "preview" ? (
-          rfi.content?.html ? (
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-                {rfi.content.css && (
-                  <style dangerouslySetInnerHTML={{ __html: rfi.content.css }} />
-                )}
-                <div dangerouslySetInnerHTML={{ __html: rfi.content.html }} />
-              </div>
+        {rfi.content?.html ? (
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+              {rfi.content.css && (
+                <style dangerouslySetInnerHTML={{ __html: rfi.content.css }} />
+              )}
+              <div dangerouslySetInnerHTML={{ __html: rfi.content.html }} />
             </div>
-          ) : (
-            <div className="max-w-3xl mx-auto px-4">
-              <div className="bg-white rounded-lg shadow-sm border p-8">
-                <h2 className="text-xl font-semibold mb-4">{rfi.subject}</h2>
-                {rfi.question && (
-                  <p className="text-muted-foreground whitespace-pre-wrap">{rfi.question}</p>
-                )}
-                <p className="mt-4 text-sm text-gray-400">No visual content yet. Click Edit to design this RFI.</p>
-              </div>
-            </div>
-          )
+          </div>
         ) : (
-          <div className="max-w-4xl mx-auto px-4">
-            {submissions.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
-                <div className="text-4xl mb-4">📭</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-1">No submissions yet</h3>
-                <p className="text-sm text-gray-500">
-                  {rfi.is_published
-                    ? "Share the public link to start receiving responses."
-                    : "Publish this RFI to start collecting submissions."}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {submissions.map((sub, idx) => (
-                  <div
-                    key={sub.id}
-                    className="bg-white rounded-lg shadow-sm border p-6"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <span className="text-sm font-semibold text-gray-900">
-                          Submission #{submissions.length - idx}
-                        </span>
-                        {sub.submitted_by_name && (
-                          <span className="ml-2 text-sm text-gray-600">
-                            by {sub.submitted_by_name}
-                          </span>
-                        )}
-                        {sub.submitted_by_email && (
-                          <span className="ml-1 text-sm text-gray-400">
-                            ({sub.submitted_by_email})
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {format(new Date(sub.created_at), "MMM d, yyyy 'at' h:mm a")}
-                      </span>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <table className="w-full text-sm">
-                        <tbody>
-                          {Object.entries(sub.data).map(([key, value]) => (
-                            <tr key={key} className="border-b border-gray-200 last:border-0">
-                              <td className="py-2 pr-4 font-medium text-gray-700 align-top w-1/3">
-                                {key}
-                              </td>
-                              <td className="py-2 text-gray-900">
-                                {Array.isArray(value)
-                                  ? value.join(", ")
-                                  : String(value || "—")}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="max-w-3xl mx-auto px-4">
+            <div className="bg-white rounded-lg shadow-sm border p-8">
+              <h2 className="text-xl font-semibold mb-4">{rfi.subject}</h2>
+              {rfi.question && (
+                <p className="text-muted-foreground whitespace-pre-wrap">{rfi.question}</p>
+              )}
+              <p className="mt-4 text-sm text-gray-400">No visual content yet. Click Edit to design this RFI.</p>
+            </div>
           </div>
         )}
       </main>
