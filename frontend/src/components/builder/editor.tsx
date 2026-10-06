@@ -166,8 +166,17 @@ const GrapesEditor = forwardRef<GrapesEditorRef, GrapesEditorProps>(
 
       addCustomBlocks(editor);
 
-      if (initialContent?.projectData) {
-        editor.loadProjectData(initialContent.projectData);
+      const hasProjectData =
+        initialContent?.projectData &&
+        Object.keys(initialContent.projectData).length > 0;
+
+      if (hasProjectData) {
+        editor.loadProjectData(initialContent!.projectData);
+      } else if (initialContent?.html) {
+        editor.setComponents(initialContent.html);
+        if (initialContent.css) {
+          editor.setStyle(initialContent.css);
+        }
       } else {
         editor.setComponents(`
           <div style="max-width:800px;margin:0 auto;padding:40px 20px;">
