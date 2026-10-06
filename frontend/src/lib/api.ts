@@ -15,9 +15,10 @@ export interface RFI {
   status: "draft" | "open" | "answered" | "closed";
   created_by: string;
   assigned_to: string | null;
-  content: { projectData?: any; html?: string; css?: string } | null;
+  content: { projectData?: any; html?: string; css?: string; formDefinition?: any } | null;
   is_published: boolean;
   publish_key: string | null;
+  workspace_id: string | null;
   created_at: string;
   updated_at: string;
   responses: RFIResponse[];
@@ -36,6 +37,18 @@ export interface PublicRFI {
   subject: string;
   content: { html?: string; css?: string } | null;
 }
+
+export interface Workspace {
+  id: string;
+  name: string;
+  description: string;
+  created_by: string;
+  rfi_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── RFI API ──
 
 export async function fetchRFIs(status?: string): Promise<RFI[]> {
   const params = status ? `?status=${status}` : "";
@@ -56,6 +69,7 @@ export async function createRFI(data: {
   created_by: string;
   assigned_to?: string;
   content?: Record<string, any>;
+  workspace_id?: string;
 }): Promise<RFI> {
   const res = await fetch(`${API_BASE}/rfis/`, {
     method: "POST",
@@ -118,5 +132,52 @@ export async function submitPublicRFI(
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to submit response");
+  return res.json();
+}
+
+// ── Workspace API ──
+
+const WS_BASE = "/rfi-api/workspaces";
+
+export async function fetchWorkspaces(): Promise<Workspace[]> {
+  const res = await fetch(`${WS_BASE}/`);
+  if (!res.ok) throw new Error("Failed to fetch workspaces");
+  return res.json();
+}
+
+export async function fetchWorkspace(id: string): Promise<Workspace> {
+  const res = await fetch(`${WS_BASE}/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch workspace");
+  return res.json();
+}
+
+export async function createWorkspace(data: { name: string; description?: string; created_by: string }): Promise<Workspace> {
+  const res = await fetch(`${WS_BASE}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create workspace");
+  return res.json();
+}
+
+export async function updateWorkspace(id: string, data: { name?: string; description?: string }): Promise<Workspace> {
+  const res = await fetch(`${WS_BASE}/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update workspace");
+  return res.json();
+}
+
+export async function deleteWorkspace(id: string): Promise<void> {
+  const res = await fetch(`${WS_BASE}/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete workspace");
+}
+
+export async function fetchWorkspaceRFIs(wsId: string): Promise<RFI[]> {
+  const res = await fetch(`${WS_BASE}/${wsId}/rfis`);
+  if (!res.ok) throw new Error("Failed to fetch workspace RFIs");
   return res.json();
 }

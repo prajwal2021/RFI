@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import rfis
+from app.routers import rfis, workspaces
 
 
 @asynccontextmanager
@@ -29,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(rfis.router)
+app.include_router(workspaces.router)
 
 
 @app.get("/api/health")

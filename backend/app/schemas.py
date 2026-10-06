@@ -28,6 +28,7 @@ class RFICreate(BaseModel):
     created_by: str
     assigned_to: str | None = None
     content: dict[str, Any] | None = None
+    workspace_id: UUID | None = None
 
 
 class RFIUpdate(BaseModel):
@@ -48,6 +49,7 @@ class RFIOut(BaseModel):
     content: dict[str, Any] | None
     is_published: bool
     publish_key: str | None
+    workspace_id: UUID | None
     created_at: datetime
     updated_at: datetime
     responses: list[RFIResponseOut] = []
@@ -83,5 +85,28 @@ class SubmissionOut(BaseModel):
     submitted_by_name: str | None
     submitted_by_email: str | None
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceCreate(BaseModel):
+    name: str
+    description: str = ""
+    created_by: str
+
+
+class WorkspaceUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class WorkspaceOut(BaseModel):
+    id: UUID
+    name: str
+    description: str
+    created_by: str
+    rfi_count: int = 0
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}

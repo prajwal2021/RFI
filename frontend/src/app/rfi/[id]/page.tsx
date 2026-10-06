@@ -172,7 +172,7 @@ export default function ViewRFIPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push(`/builder/${rfi.id}`)}
+                onClick={() => router.push(rfi.content?.formDefinition ? `/forms/${rfi.id}` : `/builder/${rfi.id}`)}
               >
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit

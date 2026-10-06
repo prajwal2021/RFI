@@ -22,6 +22,19 @@ class RFIStatus(str, enum.Enum):
     CLOSED = "closed"
 
 
+class Workspace(Base):
+    __tablename__ = "workspaces"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    rfis: Mapped[list["RFI"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
+
+
 class RFI(Base):
     __tablename__ = "rfis"
 
@@ -34,9 +47,11 @@ class RFI(Base):
     content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
     publish_key: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True, index=True)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    workspace: Mapped["Workspace | None"] = relationship(back_populates="rfis")
     responses: Mapped[list["RFIResponse"]] = relationship(back_populates="rfi", cascade="all, delete-orphan")
     submissions: Mapped[list["RFISubmission"]] = relationship(back_populates="rfi", cascade="all, delete-orphan")
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { GrapesEditorRef } from "@/components/builder/editor";
 import { createRFI } from "@/lib/api";
@@ -20,6 +20,8 @@ const GrapesEditor = dynamic(() => import("@/components/builder/editor"), {
 
 export default function NewBuilderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const workspaceId = searchParams.get("workspace") || undefined;
   const editorRef = useRef<GrapesEditorRef>(null);
   const [saving, setSaving] = useState(false);
   const [subject, setSubject] = useState("Untitled RFI");
@@ -34,6 +36,7 @@ export default function NewBuilderPage() {
         subject,
         created_by: "admin",
         content,
+        workspace_id: workspaceId,
       });
       router.push(`/builder/${rfi.id}`);
     } catch {
