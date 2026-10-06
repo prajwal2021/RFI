@@ -12,23 +12,27 @@ export default function SubmissionsPage() {
   const [rfi, setRfi] = useState<RFI | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [rfiData, subsData] = await Promise.all([
+        fetchRFI(id),
+        fetchSubmissions(id),
+      ]);
+      setRfi(rfiData);
+      setSubmissions(subsData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [rfiData, subsData] = await Promise.all([
-          fetchRFI(id),
-          fetchSubmissions(id),
-        ]);
-        setRfi(rfiData);
-        setSubmissions(subsData);
-      } catch {
-        console.error("Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    loadData();
   }, [id]);
 
   if (loading) {
@@ -42,23 +46,53 @@ export default function SubmissionsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center bg-white rounded-xl shadow-sm border p-8 max-w-md">
+          <div className="text-4xl mb-4">&#x26A0;&#xFE0F;</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Failed to load submissions
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">{error}</p>
+          <button
+            onClick={loadData}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <h1 className="text-xl font-bold text-gray-900">
-            Submissions: {rfi?.subject || "RFI"}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {submissions.length} submission{submissions.length !== 1 ? "s" : ""} received
-            {rfi && (
-              <span>
-                {" "}&middot; Created by {rfi.created_by} on{" "}
-                {format(new Date(rfi.created_at), "MMM d, yyyy")}
-              </span>
-            )}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                Submissions: {rfi?.subject || "RFI"}
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                {submissions.length} submission{submissions.length !== 1 ? "s" : ""} received
+                {rfi && (
+                  <span>
+                    {" "}&middot; Created by {rfi.created_by} on{" "}
+                    {format(new Date(rfi.created_at), "MMM d, yyyy")}
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={loadData}
+              className="text-sm text-blue-600 hover:text-blue-800 px-3 py-1 border border-blue-200 rounded-md hover:bg-blue-50 transition"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
       </header>
 
@@ -66,7 +100,7 @@ export default function SubmissionsPage() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {submissions.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border p-16 text-center">
-            <div className="text-5xl mb-4">📭</div>
+            <div className="text-5xl mb-4">&#x1F4ED;</div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               No submissions yet
             </h3>
@@ -136,7 +170,7 @@ export default function SubmissionsPage() {
                             className="border-b border-gray-100 last:border-0"
                           >
                             <td className="py-3 pr-6 font-medium text-gray-600 align-top w-1/3 whitespace-nowrap">
-                              {key}
+                              {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                             </td>
                             <td className="py-3 text-gray-900 whitespace-pre-wrap">
                               {displayValue}
