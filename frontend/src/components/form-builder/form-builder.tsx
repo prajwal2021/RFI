@@ -616,7 +616,6 @@ export default function FormBuilder({
 
           {/* Added fields list */}
           <div className="flex-1 overflow-y-auto p-3">
-            {fields.filter((f) => f.category !== "element" && f.type !== "heading" && f.type !== "divider").length === 0 && fields.length > 0 ? null : null}
             {fields.map((f) => (
               <button
                 key={f.id}
