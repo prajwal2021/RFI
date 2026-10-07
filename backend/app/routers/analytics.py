@@ -2,8 +2,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, literal_column, select
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy import func, literal_column, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access import rfi_visible_clause
@@ -94,8 +93,5 @@ async def overview(
 ):
     days = min(max(days, 7), 365)
     tz = tz if _TZ.match(tz) else "UTC"
-    try:
-        return await _compute(db, user, days, tz)
-    except DBAPIError:
-        await db.rollback()
-        return await _compute(db, user, days, "UTC")
+    known = (await db.execute(text("SELECT 1 FROM pg_timezone_names WHERE name = :n"), {"n": tz})).first()
+    return await _compute(db, user, days, tz if known else "UTC")
