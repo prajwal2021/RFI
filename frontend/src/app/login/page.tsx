@@ -2,14 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, ClipboardCheck, FolderTree, ShieldCheck } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { login } from "@/lib/auth";
-
-const FEATURES = [
-  { icon: <FolderTree className="h-4 w-4" />, text: "Organise forms in private or organisation workspaces" },
-  { icon: <BarChart3 className="h-4 w-4" />, text: "Track responses with live activity charts" },
-  { icon: <ShieldCheck className="h-4 w-4" />, text: "Role-based access for your whole team" },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,39 +26,23 @@ export default function LoginPage() {
   };
 
   const input =
-    "w-full h-11 px-3.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary";
+    "w-full h-11 px-3.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#cc0000]/25 focus:border-[#cc0000]";
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-white">
-      <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 p-12 text-white">
-        <div className="flex items-center gap-2.5">
-          <span className="h-9 w-9 rounded-lg bg-white/15 flex items-center justify-center">
-            <ClipboardCheck className="h-5 w-5" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight">RFI System</span>
-        </div>
-        <div>
-          <h2 className="text-3xl font-semibold leading-tight tracking-tight">
-            Collect, track and act on
-            <br />
-            every request for information.
-          </h2>
-          <ul className="mt-8 space-y-4">
-            {FEATURES.map((f) => (
-              <li key={f.text} className="flex items-start gap-3 text-indigo-50">
-                <span className="mt-0.5 h-7 w-7 rounded-md bg-white/15 flex items-center justify-center shrink-0">{f.icon}</span>
-                <span className="text-sm leading-6">{f.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="text-xs text-indigo-200">© {new Date().getFullYear()} RFI System</p>
+      <div className="hidden lg:block relative overflow-hidden bg-[#1a1a1a]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/rfi/login-art.svg"
+          alt="TTU Online RFI System"
+          className="absolute inset-0 h-full w-full object-cover object-left"
+        />
       </div>
 
       <div className="flex items-center justify-center px-6 py-12">
         <form onSubmit={submit} className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <span className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+            <span className="h-9 w-9 rounded-lg bg-[#cc0000] flex items-center justify-center">
               <ClipboardCheck className="h-5 w-5 text-white" />
             </span>
             <span className="text-lg font-semibold tracking-tight text-slate-900">RFI System</span>
@@ -109,7 +87,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:opacity-90 disabled:opacity-60"
+              className="w-full h-11 rounded-lg bg-[#cc0000] text-white text-sm font-medium shadow-sm hover:bg-[#b30000] disabled:opacity-60"
             >
               {busy ? "Signing in…" : "Sign in"}
             </button>
