@@ -148,6 +148,7 @@ async def update_rfi(
         record(db, user, "form_settings_changed", "rfi", rfi.id, rfi.subject, {"fields": settings_changed})
     record(db, user, "form_updated", "rfi", rfi.id, rfi.subject, {"fields": sorted(changes)})
     await db.commit()
+    await db.refresh(rfi)  # onupdate columns (updated_at) are expired by the UPDATE
     await db.refresh(rfi, attribute_names=["responses"])
     return rfi
 
@@ -183,6 +184,7 @@ async def unpublish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: As
     rfi.is_published = False
     record(db, user, "form_unpublished", "rfi", rfi.id, rfi.subject)
     await db.commit()
+    await db.refresh(rfi)  # onupdate columns (updated_at) are expired by the UPDATE
     await db.refresh(rfi, attribute_names=["responses"])
     return rfi
 
