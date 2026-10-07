@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { fetchPublicRFI, submitPublicRFI } from "@/lib/api";
+
+const SurveyRunner = dynamic(() => import("@/components/surveyjs/survey-runner"), { ssr: false });
 
 export default function PublicFormPage() {
   const params = useParams();
@@ -138,6 +141,24 @@ export default function PublicFormPage() {
             Thank you for your response. Your submission has been recorded.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (rfi?.content?.surveyDefinition) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <SurveyRunner
+          json={rfi.content.surveyDefinition}
+          onComplete={async (data) => {
+            try {
+              await submitPublicRFI(key, { data });
+              setSubmitted(true);
+            } catch {
+              alert("Failed to submit. Please try again.");
+            }
+          }}
+        />
       </div>
     );
   }

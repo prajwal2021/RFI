@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { fetchWorkspace, fetchWorkspaceRFIs, deleteRFI, publishRFI, RFI } from "@/lib/api";
+import { fetchWorkspace, fetchWorkspaceRFIs, deleteRFI, publishRFI, getEditPath, RFI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, FilePlus2, Eye, Pencil, Trash2, FileText,
-  Globe, Copy, ClipboardList,
+  Globe, Copy, ClipboardList, ListChecks,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -70,10 +70,6 @@ export default function WorkspacePage() {
     setRfis(rfis.filter((r) => r.id !== rfiId));
   }
 
-  function getEditPath(rfi: RFI) {
-    return rfi.content?.formDefinition ? `/forms/${rfi.id}` : `/builder/${rfi.id}`;
-  }
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
   }
@@ -101,6 +97,13 @@ export default function WorkspacePage() {
               <Button size="sm" onClick={() => router.push(`/forms/new?workspace=${id}`)}>
                 <ClipboardList className="h-4 w-4 mr-1" /> SS Form
               </Button>
+              <Button
+                size="sm"
+                className="bg-[#19b394] hover:bg-[#139a7e] text-white"
+                onClick={() => router.push(`/surveyjs/new?workspace=${id}`)}
+              >
+                <ListChecks className="h-4 w-4 mr-1" /> SurveyJS
+              </Button>
             </div>
           </div>
         </div>
@@ -119,6 +122,12 @@ export default function WorkspacePage() {
               <Button onClick={() => router.push(`/forms/new?workspace=${id}`)}>
                 <ClipboardList className="h-4 w-4 mr-1" /> SS Form
               </Button>
+              <Button
+                className="bg-[#19b394] hover:bg-[#139a7e] text-white"
+                onClick={() => router.push(`/surveyjs/new?workspace=${id}`)}
+              >
+                <ListChecks className="h-4 w-4 mr-1" /> SurveyJS
+              </Button>
             </div>
           </div>
         ) : (
@@ -131,6 +140,9 @@ export default function WorkspacePage() {
                     <Badge variant={STATUS_VARIANT[rfi.status]}>{rfi.status}</Badge>
                     {rfi.content?.formDefinition && (
                       <Badge variant="draft" className="bg-indigo-100 text-indigo-700 text-xs">SS Form</Badge>
+                    )}
+                    {rfi.content?.surveyDefinition && (
+                      <Badge variant="draft" className="bg-emerald-100 text-emerald-700 text-xs">SurveyJS</Badge>
                     )}
                     {rfi.is_published && (
                       <Badge variant="open" className="bg-green-100 text-green-700 text-xs">

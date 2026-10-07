@@ -43,6 +43,25 @@ function extractFormFields(html: string): { name: string; label: string }[] {
   return fields;
 }
 
+function extractSurveyFields(json: any): { name: string; label: string }[] {
+  const out: { name: string; label: string }[] = [];
+  const walk = (elements: any[] | undefined) => {
+    for (const el of elements || []) {
+      if (el.type === "panel") {
+        walk(el.elements);
+      } else if (el.type !== "html" && el.type !== "image" && el.name) {
+        const title = typeof el.title === "string" ? el.title : el.title?.default;
+        out.push({ name: el.name, label: title || el.name });
+      }
+    }
+  };
+  if (json?.pages) {
+    for (const p of json.pages) walk(p.elements);
+  }
+  walk(json?.elements);
+  return out;
+}
+
 function formatKey(key: string): string {
   if (/[a-z]_[a-z]/.test(key)) {
     return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -52,7 +71,12 @@ function formatKey(key: string): string {
 
 function formatValue(value: any): string {
   if (value === null || value === undefined) return "—";
-  if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "—";
+  if (Array.isArray(value)) {
+    return value.length > 0
+      ? value.map((v) => (typeof v === "object" ? JSON.stringify(v) : String(v))).join(", ")
+      : "—";
+  }
+  if (typeof value === "object") return JSON.stringify(value);
   const str = String(value);
   return str.trim() === "" ? "—" : str;
 }
@@ -88,8 +112,11 @@ export default function SubmissionsPage() {
   }, [id]);
 
   const formFields = useMemo(
-    () => extractFormFields(rfi?.content?.html || ""),
-    [rfi?.content?.html]
+    () =>
+      rfi?.content?.surveyDefinition
+        ? extractSurveyFields(rfi.content.surveyDefinition)
+        : extractFormFields(rfi?.content?.html || ""),
+    [rfi?.content?.html, rfi?.content?.surveyDefinition]
   );
 
   const getFieldRows = (data: Record<string, any>) => {

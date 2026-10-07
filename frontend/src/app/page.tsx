@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RFI, Workspace, fetchRFIs, fetchWorkspaces, deleteRFI, publishRFI, createWorkspace, deleteWorkspace } from "@/lib/api";
+import { RFI, Workspace, fetchRFIs, fetchWorkspaces, deleteRFI, publishRFI, createWorkspace, deleteWorkspace, getEditPath } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   FilePlus2, Eye, Pencil, Trash2, FileText,
   LayoutDashboard, Search, Globe, Copy, Send,
-  FolderPlus, Folder, ClipboardList, Plus, X,
+  FolderPlus, Folder, ClipboardList, Plus, X, ListChecks,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -109,10 +109,6 @@ export default function DashboardPage() {
     }
   }
 
-  function getEditPath(rfi: RFI) {
-    return rfi.content?.formDefinition ? `/forms/${rfi.id}` : `/builder/${rfi.id}`;
-  }
-
   const filteredRFIs = rfis.filter(
     (rfi) =>
       rfi.subject.toLowerCase().includes(search.toLowerCase()) ||
@@ -141,6 +137,13 @@ export default function DashboardPage() {
               </Button>
               <Button size="sm" onClick={() => router.push("/forms/new")}>
                 <ClipboardList className="h-4 w-4 mr-1" /> SS Form
+              </Button>
+              <Button
+                size="sm"
+                className="bg-[#19b394] hover:bg-[#139a7e] text-white"
+                onClick={() => router.push("/surveyjs/new")}
+              >
+                <ListChecks className="h-4 w-4 mr-1" /> SurveyJS
               </Button>
             </div>
           </div>
@@ -333,6 +336,12 @@ export default function DashboardPage() {
                       <Button onClick={() => router.push("/forms/new")}>
                         <ClipboardList className="h-4 w-4 mr-2" /> SS Form
                       </Button>
+                      <Button
+                        className="bg-[#19b394] hover:bg-[#139a7e] text-white"
+                        onClick={() => router.push("/surveyjs/new")}
+                      >
+                        <ListChecks className="h-4 w-4 mr-2" /> SurveyJS
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -353,6 +362,11 @@ export default function DashboardPage() {
                             {rfi.content?.formDefinition && (
                               <Badge variant="draft" className="bg-indigo-100 text-indigo-700 text-xs">
                                 SS Form
+                              </Badge>
+                            )}
+                            {rfi.content?.surveyDefinition && (
+                              <Badge variant="draft" className="bg-emerald-100 text-emerald-700 text-xs">
+                                SurveyJS
                               </Badge>
                             )}
                             {rfi.is_published && (

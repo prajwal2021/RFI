@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { fetchRFI, fetchSubmissions, publishRFI, unpublishRFI, RFI } from "@/lib/api";
+import dynamic from "next/dynamic";
+import { fetchRFI, fetchSubmissions, publishRFI, unpublishRFI, getEditPath, RFI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pencil, Globe, GlobeLock, Copy, ExternalLink, FileText } from "lucide-react";
 import { format } from "date-fns";
+
+const SurveyRunner = dynamic(() => import("@/components/surveyjs/survey-runner"), { ssr: false });
 
 const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> = {
   draft: "draft",
@@ -172,7 +175,7 @@ export default function ViewRFIPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push(rfi.content?.formDefinition ? `/forms/${rfi.id}` : `/builder/${rfi.id}`)}
+                onClick={() => router.push(getEditPath(rfi))}
               >
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
@@ -184,7 +187,13 @@ export default function ViewRFIPage() {
 
       {/* Preview Content */}
       <main className="py-8">
-        {rfi.content?.html ? (
+        {rfi.content?.surveyDefinition ? (
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+              <SurveyRunner json={rfi.content.surveyDefinition} readOnly />
+            </div>
+          </div>
+        ) : rfi.content?.html ? (
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
               {rfi.content.css && (
