@@ -23,7 +23,7 @@ export function buildExportTable(
   fieldsFor: (rfiId: string) => FieldInfo[],
   fallbackSubject = ""
 ): string[][] {
-  const fixed = ["Form", "Submitted at", "Name", "Email"];
+  const fixed = ["Form", "Submitted at", "Respondent name", "Respondent email"];
   const labelIndex = new Map<string, number>();
   const records: { fixed: string[]; values: Map<number, string> }[] = [];
 
