@@ -147,19 +147,19 @@ export default function PublicFormPage() {
 
   if (rfi?.content?.surveyDefinition) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <SurveyRunner
-          json={rfi.content.surveyDefinition}
-          onComplete={async (data) => {
-            try {
-              await submitPublicRFI(key, { data });
-              setSubmitted(true);
-            } catch {
-              alert("Failed to submit. Please try again.");
-            }
-          }}
-        />
-      </div>
+      <SurveyRunner
+        fullPage
+        json={rfi.content.surveyDefinition}
+        theme={rfi.content.surveyTheme}
+        onComplete={async (data) => {
+          try {
+            await submitPublicRFI(key, { data });
+            setSubmitted(true);
+          } catch {
+            alert("Failed to submit. Please try again.");
+          }
+        }}
+      />
     );
   }
 

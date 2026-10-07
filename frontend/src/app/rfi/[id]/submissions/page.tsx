@@ -71,6 +71,9 @@ function formatKey(key: string): string {
 
 function formatValue(value: any): string {
   if (value === null || value === undefined) return "—";
+  if (Array.isArray(value) && value.length > 0 && value.every((v) => v && typeof v === "object" && "name" in v && "content" in v)) {
+    return value.map((v) => v.name).join(", ");
+  }
   if (Array.isArray(value)) {
     return value.length > 0
       ? value.map((v) => (typeof v === "object" ? JSON.stringify(v) : String(v))).join(", ")
@@ -278,7 +281,12 @@ export default function SubmissionsPage() {
                               {row.label}
                             </td>
                             <td className="py-3 text-gray-900 whitespace-pre-wrap">
-                              {row.value}
+                              {row.value.startsWith("data:image") ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={row.value} alt="" className="max-h-28 rounded border border-gray-200 bg-white" />
+                              ) : (
+                                row.value
+                              )}
                             </td>
                           </tr>
                         ))}

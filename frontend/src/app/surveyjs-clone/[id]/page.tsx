@@ -14,6 +14,7 @@ export default function EditSurveyClonePage() {
   const params = useParams();
   const id = params.id as string;
   const [json, setJson] = useState<any>(null);
+  const [theme, setTheme] = useState<any>(undefined);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -21,6 +22,7 @@ export default function EditSurveyClonePage() {
     fetchRFI(id)
       .then((rfi) => {
         setJson(rfi.content?.surveyDefinition || null);
+        setTheme(rfi.content?.surveyTheme);
         setTitle(rfi.subject);
       })
       .catch(() => alert("Failed to load survey"))
@@ -35,5 +37,5 @@ export default function EditSurveyClonePage() {
     );
   }
 
-  return <SurveyDesigner initialJson={json || undefined} initialTitle={title} rfiId={id} />;
+  return <SurveyDesigner initialJson={json || undefined} initialTheme={theme} initialTitle={title} rfiId={id} />;
 }

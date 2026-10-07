@@ -190,7 +190,7 @@ export default function ViewRFIPage() {
         {rfi.content?.surveyDefinition ? (
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <SurveyRunner json={rfi.content.surveyDefinition} readOnly />
+              <SurveyRunner json={rfi.content.surveyDefinition} theme={rfi.content.surveyTheme} readOnly />
             </div>
           </div>
         ) : rfi.content?.html ? (

@@ -15,7 +15,7 @@ export interface RFI {
   status: "draft" | "open" | "answered" | "closed";
   created_by: string;
   assigned_to: string | null;
-  content: { projectData?: any; html?: string; css?: string; formDefinition?: any; surveyDefinition?: any; surveyEditor?: string } | null;
+  content: { projectData?: any; html?: string; css?: string; formDefinition?: any; surveyDefinition?: any; surveyTheme?: any; surveyEditor?: string } | null;
   is_published: boolean;
   publish_key: string | null;
   workspace_id: string | null;
@@ -35,7 +35,7 @@ export interface Submission {
 
 export interface PublicRFI {
   subject: string;
-  content: { html?: string; css?: string; surveyDefinition?: any } | null;
+  content: { html?: string; css?: string; surveyDefinition?: any; surveyTheme?: any } | null;
 }
 
 export function getEditPath(rfi: Pick<RFI, "id" | "content">): string {
