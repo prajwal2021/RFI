@@ -39,7 +39,7 @@ const TABS = [
 export default function DashboardPage() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
-  const [respFilter, setRespFilter] = useState({ form: "", date: "", nonce: 0 });
+  const [respFilter, setRespFilter] = useState({ form: "", from: "", to: "", nonce: 0 });
   const [rfis, setRfis] = useState<RFI[]>([]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [me, setMe] = useState<Me | null>(null);
@@ -144,8 +144,8 @@ export default function DashboardPage() {
 
   const hasOrg = !!me?.org_id;
 
-  function openResponses(form: string, date: string) {
-    setRespFilter({ form, date, nonce: Date.now() });
+  function openResponses(form: string, from: string, to: string) {
+    setRespFilter({ form, from, to, nonce: Date.now() });
     setTab("responses");
   }
 
@@ -155,7 +155,7 @@ export default function DashboardPage() {
         tabs={TABS}
         activeTab={tab}
         onTab={(k) => {
-          if (k === "responses") setRespFilter({ form: "", date: "", nonce: Date.now() });
+          if (k === "responses") setRespFilter({ form: "", from: "", to: "", nonce: Date.now() });
           setTab(k as Tab);
         }}
       />
@@ -433,7 +433,7 @@ export default function DashboardPage() {
 
           {/* ── Responses Tab ── */}
           {tab === "responses" && (
-            <ResponsesPanel key={respFilter.nonce} initialForm={respFilter.form} initialDate={respFilter.date} />
+            <ResponsesPanel key={respFilter.nonce} initialForm={respFilter.form} initialFrom={respFilter.from} initialTo={respFilter.to} />
           )}
         </main>
       </div>

@@ -33,13 +33,17 @@ function localYmd(iso: string): string {
 
 export default function ResponsesPanel({
   initialForm = "",
-  initialDate = "",
+  initialFrom = "",
+  initialTo = "",
 }: {
   initialForm?: string;
-  initialDate?: string;
+  initialFrom?: string;
+  initialTo?: string;
 }) {
   const router = useRouter();
-  const [dateFilter, setDateFilter] = useState(initialDate);
+  const [dateFilter, setDateFilter] = useState<{ from: string; to: string } | null>(
+    initialFrom ? { from: initialFrom, to: initialTo || initialFrom } : null
+  );
   const [rfis, setRfis] = useState<RFI[]>([]);
   const [subs, setSubs] = useState<SubmissionWithRFI[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +96,10 @@ export default function ResponsesPanel({
     const q = search.trim().toLowerCase();
     return subs.filter((s) => {
       if (formFilter && s.rfi_id !== formFilter) return false;
-      if (dateFilter && localYmd(s.created_at) !== dateFilter) return false;
+      if (dateFilter) {
+        const day = localYmd(s.created_at);
+        if (day < dateFilter.from || day > dateFilter.to) return false;
+      }
       if (!q) return true;
       return (
         s.rfi_subject.toLowerCase().includes(q) ||
@@ -155,9 +162,11 @@ export default function ResponsesPanel({
           {dateFilter && (
             <div className="mt-3 flex items-center gap-2 text-sm">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 pl-3 pr-1.5 py-1">
-                Date: {format(new Date(`${dateFilter}T12:00:00`), "MMM d, yyyy")}
+                {dateFilter.from === dateFilter.to
+                  ? format(new Date(`${dateFilter.from}T12:00:00`), "MMM d, yyyy")
+                  : `${format(new Date(`${dateFilter.from}T12:00:00`), "MMM d")} – ${format(new Date(`${dateFilter.to}T12:00:00`), "MMM d, yyyy")}`}
                 <button
-                  onClick={() => setDateFilter("")}
+                  onClick={() => setDateFilter(null)}
                   className="rounded-full p-0.5 hover:bg-indigo-100"
                   aria-label="Clear date filter"
                 >
