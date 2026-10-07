@@ -5,8 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.access import get_accessible_rfi, get_accessible_workspace, rfi_visible_clause
+from app.auth import require_user
 from app.database import get_db
-from app.models import RFI, RFIResponse, RFISubmission, RFIStatus, generate_publish_key
+from app.models import RFI, RFIResponse, RFISubmission, RFIStatus, User, Workspace, generate_publish_key
 from app.schemas import (
     RFICreate, RFIUpdate, RFIOut,
     RFIResponseCreate, RFIResponseOut,
@@ -59,11 +61,21 @@ async def submit_public_rfi(
     return submission
 
 
-# ── Management endpoints ──
+# ── Management endpoints (authenticated, scoped to what the user may see) ──
 
 @router.get("/", response_model=list[RFIOut])
-async def list_rfis(status: RFIStatus | None = None, db: AsyncSession = Depends(get_db)):
-    query = select(RFI).options(selectinload(RFI.responses)).order_by(RFI.created_at.desc())
+async def list_rfis(
+    status: RFIStatus | None = None,
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = (
+        select(RFI)
+        .outerjoin(Workspace, RFI.workspace_id == Workspace.id)
+        .options(selectinload(RFI.responses))
+        .where(rfi_visible_clause(user))
+        .order_by(RFI.created_at.desc())
+    )
     if status:
         query = query.where(RFI.status == status)
     result = await db.execute(query)
@@ -71,8 +83,11 @@ async def list_rfis(status: RFIStatus | None = None, db: AsyncSession = Depends(
 
 
 @router.post("/", response_model=RFIOut, status_code=201)
-async def create_rfi(rfi_in: RFICreate, db: AsyncSession = Depends(get_db)):
-    rfi = RFI(**rfi_in.model_dump())
+async def create_rfi(rfi_in: RFICreate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    if rfi_in.workspace_id:
+        await get_accessible_workspace(db, user, rfi_in.workspace_id)
+    data = rfi_in.model_dump(exclude={"created_by"})
+    rfi = RFI(**data, created_by=user.email, owner_id=user.id)
     db.add(rfi)
     await db.commit()
     await db.refresh(rfi, attribute_names=["responses"])
@@ -80,24 +95,15 @@ async def create_rfi(rfi_in: RFICreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{rfi_id}", response_model=RFIOut)
-async def get_rfi(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(RFI).options(selectinload(RFI.responses)).where(RFI.id == rfi_id)
-    )
-    rfi = result.scalar_one_or_none()
-    if not rfi:
-        raise HTTPException(status_code=404, detail="RFI not found")
-    return rfi
+async def get_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    return await get_accessible_rfi(db, user, rfi_id, with_responses=True)
 
 
 @router.patch("/{rfi_id}", response_model=RFIOut)
-async def update_rfi(rfi_id: UUID, rfi_in: RFIUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(RFI).options(selectinload(RFI.responses)).where(RFI.id == rfi_id)
-    )
-    rfi = result.scalar_one_or_none()
-    if not rfi:
-        raise HTTPException(status_code=404, detail="RFI not found")
+async def update_rfi(
+    rfi_id: UUID, rfi_in: RFIUpdate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+):
+    rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
     for field, value in rfi_in.model_dump(exclude_unset=True).items():
         setattr(rfi, field, value)
     await db.commit()
@@ -106,21 +112,15 @@ async def update_rfi(rfi_id: UUID, rfi_in: RFIUpdate, db: AsyncSession = Depends
 
 
 @router.delete("/{rfi_id}", status_code=204)
-async def delete_rfi(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RFI).where(RFI.id == rfi_id))
-    rfi = result.scalar_one_or_none()
-    if not rfi:
-        raise HTTPException(status_code=404, detail="RFI not found")
+async def delete_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    rfi = await get_accessible_rfi(db, user, rfi_id)
     await db.delete(rfi)
     await db.commit()
 
 
 @router.post("/{rfi_id}/publish", response_model=RFIPublishResult)
-async def publish_rfi(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RFI).where(RFI.id == rfi_id))
-    rfi = result.scalar_one_or_none()
-    if not rfi:
-        raise HTTPException(status_code=404, detail="RFI not found")
+async def publish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    rfi = await get_accessible_rfi(db, user, rfi_id)
     if not rfi.content:
         raise HTTPException(status_code=400, detail="Cannot publish an RFI without content")
 
@@ -135,13 +135,8 @@ async def publish_rfi(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{rfi_id}/unpublish", response_model=RFIOut)
-async def unpublish_rfi(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(RFI).options(selectinload(RFI.responses)).where(RFI.id == rfi_id)
-    )
-    rfi = result.scalar_one_or_none()
-    if not rfi:
-        raise HTTPException(status_code=404, detail="RFI not found")
+async def unpublish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
     rfi.is_published = False
     await db.commit()
     await db.refresh(rfi, attribute_names=["responses"])
@@ -149,10 +144,8 @@ async def unpublish_rfi(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{rfi_id}/submissions", response_model=list[SubmissionOut])
-async def get_submissions(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RFI).where(RFI.id == rfi_id))
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="RFI not found")
+async def get_submissions(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    await get_accessible_rfi(db, user, rfi_id)
     result = await db.execute(
         select(RFISubmission)
         .where(RFISubmission.rfi_id == rfi_id)
@@ -162,11 +155,10 @@ async def get_submissions(rfi_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{rfi_id}/responses", response_model=RFIResponseOut, status_code=201)
-async def add_response(rfi_id: UUID, resp_in: RFIResponseCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RFI).where(RFI.id == rfi_id))
-    rfi = result.scalar_one_or_none()
-    if not rfi:
-        raise HTTPException(status_code=404, detail="RFI not found")
+async def add_response(
+    rfi_id: UUID, resp_in: RFIResponseCreate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+):
+    rfi = await get_accessible_rfi(db, user, rfi_id)
     response = RFIResponse(rfi_id=rfi_id, **resp_in.model_dump())
     db.add(response)
     rfi.status = RFIStatus.ANSWERED

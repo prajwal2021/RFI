@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import ProfileMenu from "@/components/profile-menu";
 import { fetchRFI, fetchSubmissions, publishRFI, unpublishRFI, getEditPath, RFI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -172,14 +173,19 @@ export default function ViewRFIPage() {
                   </span>
                 )}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(getEditPath(rfi))}
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
+              {getEditPath(rfi) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(getEditPath(rfi) as string)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              <div className="ml-2">
+                <ProfileMenu />
+              </div>
             </div>
           </div>
         </div>

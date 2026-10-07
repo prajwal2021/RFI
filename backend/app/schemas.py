@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -25,7 +25,7 @@ class RFIResponseOut(BaseModel):
 class RFICreate(BaseModel):
     subject: str
     question: str = ""
-    created_by: str
+    created_by: str = ""
     assigned_to: str | None = None
     content: dict[str, Any] | None = None
     workspace_id: UUID | None = None
@@ -89,10 +89,73 @@ class SubmissionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SubmissionWithRFI(BaseModel):
+    id: UUID
+    rfi_id: UUID
+    rfi_subject: str
+    data: dict[str, Any]
+    submitted_by_name: str | None
+    submitted_by_email: str | None
+    created_at: datetime
+
+
+class LoginIn(BaseModel):
+    email: str
+    password: str
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class UserOut(BaseModel):
+    id: UUID
+    email: str
+    is_admin: bool = False
+    org_id: UUID | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class MeOut(UserOut):
+    org_name: str | None = None
+
+
+class OrgCreate(BaseModel):
+    name: str
+
+
+class OrgUserCreate(BaseModel):
+    email: str
+    password: str
+    is_admin: bool = False
+
+
+class AdminResetPasswordIn(BaseModel):
+    new_password: str
+
+
+class OrgOut(BaseModel):
+    id: UUID
+    name: str
+    created_by: str
+    created_at: datetime
+    users: list[UserOut] = []
+
+    model_config = {"from_attributes": True}
+
+
+class TokenOut(BaseModel):
+    token: str
+    user: UserOut
+
+
 class WorkspaceCreate(BaseModel):
     name: str
     description: str = ""
-    created_by: str
+    created_by: str = ""
+    visibility: Literal["private", "org"] = "private"
 
 
 class WorkspaceUpdate(BaseModel):
@@ -105,6 +168,9 @@ class WorkspaceOut(BaseModel):
     name: str
     description: str
     created_by: str
+    visibility: str = "private"
+    owner_email: str | None = None
+    is_owner: bool = False
     rfi_count: int = 0
     created_at: datetime
     updated_at: datetime
