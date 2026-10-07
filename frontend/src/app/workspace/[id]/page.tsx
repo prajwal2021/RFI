@@ -104,6 +104,14 @@ export default function WorkspacePage() {
               >
                 <ListChecks className="h-4 w-4 mr-1" /> SurveyJS
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#19b394] text-[#19b394] hover:bg-emerald-50"
+                onClick={() => router.push(`/surveyjs-clone/new?workspace=${id}`)}
+              >
+                <ListChecks className="h-4 w-4 mr-1" /> SurveyJS Clone
+              </Button>
             </div>
           </div>
         </div>
@@ -127,6 +135,13 @@ export default function WorkspacePage() {
                 onClick={() => router.push(`/surveyjs/new?workspace=${id}`)}
               >
                 <ListChecks className="h-4 w-4 mr-1" /> SurveyJS
+              </Button>
+              <Button
+                variant="outline"
+                className="border-[#19b394] text-[#19b394] hover:bg-emerald-50"
+                onClick={() => router.push(`/surveyjs-clone/new?workspace=${id}`)}
+              >
+                <ListChecks className="h-4 w-4 mr-1" /> SurveyJS Clone
               </Button>
             </div>
           </div>

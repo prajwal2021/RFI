@@ -145,6 +145,14 @@ export default function DashboardPage() {
               >
                 <ListChecks className="h-4 w-4 mr-1" /> SurveyJS
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#19b394] text-[#19b394] hover:bg-emerald-50"
+                onClick={() => router.push("/surveyjs-clone/new")}
+              >
+                <ListChecks className="h-4 w-4 mr-1" /> SurveyJS Clone
+              </Button>
             </div>
           </div>
           {/* Tabs */}
@@ -341,6 +349,13 @@ export default function DashboardPage() {
                         onClick={() => router.push("/surveyjs/new")}
                       >
                         <ListChecks className="h-4 w-4 mr-2" /> SurveyJS
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="border-[#19b394] text-[#19b394] hover:bg-emerald-50"
+                        onClick={() => router.push("/surveyjs-clone/new")}
+                      >
+                        <ListChecks className="h-4 w-4 mr-2" /> SurveyJS Clone
                       </Button>
                     </div>
                   </div>

@@ -15,7 +15,7 @@ export interface RFI {
   status: "draft" | "open" | "answered" | "closed";
   created_by: string;
   assigned_to: string | null;
-  content: { projectData?: any; html?: string; css?: string; formDefinition?: any; surveyDefinition?: any } | null;
+  content: { projectData?: any; html?: string; css?: string; formDefinition?: any; surveyDefinition?: any; surveyEditor?: string } | null;
   is_published: boolean;
   publish_key: string | null;
   workspace_id: string | null;
@@ -39,7 +39,9 @@ export interface PublicRFI {
 }
 
 export function getEditPath(rfi: Pick<RFI, "id" | "content">): string {
-  if (rfi.content?.surveyDefinition) return `/surveyjs/${rfi.id}`;
+  if (rfi.content?.surveyDefinition) {
+    return rfi.content.surveyEditor === "clone" ? `/surveyjs-clone/${rfi.id}` : `/surveyjs/${rfi.id}`;
+  }
   if (rfi.content?.formDefinition) return `/forms/${rfi.id}`;
   return `/builder/${rfi.id}`;
 }
