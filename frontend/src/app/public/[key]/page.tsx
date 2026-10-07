@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { fetchPublicRFI, submitPublicRFI } from "@/lib/api";
+import { fetchPublicRFI, submitPublicRFI, PublicRFI } from "@/lib/api";
 
 const SurveyRunner = dynamic(() => import("@/components/surveyjs/survey-runner"), { ssr: false });
 
@@ -12,7 +12,7 @@ export default function PublicFormPage() {
   const key = params.key as string;
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [rfi, setRfi] = useState<{ subject: string; content: any } | null>(null);
+  const [rfi, setRfi] = useState<PublicRFI | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -99,8 +99,8 @@ export default function PublicFormPage() {
         submitted_by_email: email || undefined,
       });
       setSubmitted(true);
-    } catch {
-      alert("Failed to submit. Please try again.");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to submit. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -129,6 +129,18 @@ export default function PublicFormPage() {
     );
   }
 
+  if (rfi && rfi.accepting === false && !submitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg">
+          <div className="mb-4 text-4xl">⏳</div>
+          <h1 className="mb-2 text-xl font-semibold text-gray-900">{rfi.subject}</h1>
+          <p className="text-gray-500">{rfi.closed_reason || "This form is not accepting responses right now."}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -137,8 +149,8 @@ export default function PublicFormPage() {
           <h1 className="mb-2 text-xl font-semibold text-gray-900">
             Response Submitted
           </h1>
-          <p className="text-gray-500">
-            Thank you for your response. Your submission has been recorded.
+          <p className="text-gray-500 whitespace-pre-wrap">
+            {rfi?.thank_you_message || "Thank you for your response. Your submission has been recorded."}
           </p>
         </div>
       </div>
@@ -155,8 +167,8 @@ export default function PublicFormPage() {
           try {
             await submitPublicRFI(key, { data });
             setSubmitted(true);
-          } catch {
-            alert("Failed to submit. Please try again.");
+          } catch (e) {
+            alert(e instanceof Error ? e.message : "Failed to submit. Please try again.");
           }
         }}
       />

@@ -3,7 +3,7 @@ import secrets
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, DateTime, Enum as SAEnum, ForeignKey, Boolean, false
+from sqlalchemy import String, Text, DateTime, Enum as SAEnum, ForeignKey, Boolean, Integer, Index, false
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -58,6 +58,10 @@ class RFI(Base):
     owner_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    opens_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    max_responses: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    thank_you_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -115,3 +119,18 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     org: Mapped["Organisation | None"] = relationship(back_populates="users")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    __table_args__ = (Index("ix_audit_logs_created_at", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    actor_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    entity_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    entity_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

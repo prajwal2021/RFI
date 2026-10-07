@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { FileText, Globe, Inbox, TrendingUp, X, ArrowUpRight } from "lucide-react";
+import { FileText, Globe, Inbox, TrendingUp, X, ArrowUpRight, Flame, CalendarDays } from "lucide-react";
 import { Analytics, AnalyticsDay, fetchAnalytics } from "@/lib/api";
 
 const RANGES = [30, 90, 180] as const;
-const RESP_COLORS = ["#f1f5f9", "#c7d2fe", "#a5b4fc", "#6366f1", "#4338ca"];
-const CREATED_COLORS = ["#f1f5f9", "#a7f3d0", "#6ee7b7", "#10b981", "#047857"];
+const RESP_COLORS = ["#eef2ff", "#c7d2fe", "#a5b4fc", "#6366f1", "#4338ca"];
+const CREATED_COLORS = ["#ecfdf5", "#a7f3d0", "#6ee7b7", "#10b981", "#047857"];
+const IND = "#6366f1";
+const EMR = "#10b981";
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -18,7 +20,44 @@ function parse(date: string): Date {
   return new Date(`${date}T12:00:00`);
 }
 
-function Kpi({ icon, label, value, tint }: { icon: React.ReactNode; label: string; value: number | string; tint: string }) {
+/** Monotone cubic interpolation (no overshoot below zero), returned as an SVG path. */
+function smoothPath(pts: { x: number; y: number }[]): string {
+  const n = pts.length;
+  if (n === 0) return "";
+  if (n === 1) return `M${pts[0].x},${pts[0].y}`;
+  const dx: number[] = [];
+  const m: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    dx.push(pts[i + 1].x - pts[i].x);
+    m.push((pts[i + 1].y - pts[i].y) / dx[i]);
+  }
+  const t: number[] = [m[0]];
+  for (let i = 1; i < n - 1; i++) t.push(m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2);
+  t.push(m[n - 2]);
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) {
+      t[i] = 0;
+      t[i + 1] = 0;
+    } else {
+      const a = t[i] / m[i];
+      const b = t[i + 1] / m[i];
+      const s = a * a + b * b;
+      if (s > 9) {
+        const k = 3 / Math.sqrt(s);
+        t[i] = k * a * m[i];
+        t[i + 1] = k * b * m[i];
+      }
+    }
+  }
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const h = dx[i] / 3;
+    d += ` C${(pts[i].x + h).toFixed(1)},${(pts[i].y + t[i] * h).toFixed(1)} ${(pts[i + 1].x - h).toFixed(1)},${(pts[i + 1].y - t[i + 1] * h).toFixed(1)} ${pts[i + 1].x.toFixed(1)},${pts[i + 1].y.toFixed(1)}`;
+  }
+  return d;
+}
+
+function Kpi({ icon, label, value, tint, hint }: { icon: React.ReactNode; label: string; value: number | string; tint: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
@@ -26,6 +65,7 @@ function Kpi({ icon, label, value, tint }: { icon: React.ReactNode; label: strin
         <span className={`h-9 w-9 rounded-lg flex items-center justify-center ${tint}`}>{icon}</span>
       </div>
       <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 tabular-nums">{value}</div>
+      {hint && <div className="mt-0.5 text-xs text-slate-400">{hint}</div>}
     </div>
   );
 }
@@ -42,6 +82,8 @@ export default function DashboardAnalytics({
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<number | null>(null);
+  const [showResp, setShowResp] = useState(true);
+  const [showCreated, setShowCreated] = useState(true);
 
   useEffect(() => {
     setData(null);
@@ -61,6 +103,7 @@ export default function DashboardAnalytics({
       }),
     [range]
   );
+  const today = dates[dates.length - 1];
 
   const byDate = useMemo(() => {
     const m = new Map<string, AnalyticsDay>();
@@ -80,26 +123,29 @@ export default function DashboardAnalytics({
 
   const sumCreated = series.reduce((a, s) => a + s.created, 0);
   const sumResponses = series.reduce((a, s) => a + s.responses, 0);
-  const maxY = Math.max(1, ...series.map((s) => Math.max(s.created, s.responses)));
+  const peak = series.reduce((best, s) => (s.responses > best.responses ? s : best), series[0] || { date: "", responses: 0, created: 0 });
+  const avg = range ? sumResponses / range : 0;
+
+  const maxY = Math.max(1, ...series.map((s) => Math.max(showResp ? s.responses : 0, showCreated ? s.created : 0)));
   const niceMax = maxY <= 4 ? 4 : Math.ceil(maxY / 4) * 4;
 
   // ── trend chart geometry ──
-  const W = 860;
-  const H = 240;
-  const padL = 36;
-  const padR = 12;
-  const padT = 12;
-  const padB = 26;
+  const W = 1000;
+  const H = 300;
+  const padL = 40;
+  const padR = 16;
+  const padT = 16;
+  const padB = 30;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   const step = plotW / series.length;
   const x = (i: number) => padL + (i + 0.5) * step;
   const y = (v: number) => padT + plotH - (v / niceMax) * plotH;
-  const line = (key: "created" | "responses") =>
-    series.map((s, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(s[key]).toFixed(1)}`).join(" ");
-  const area = (key: "created" | "responses") =>
-    `${line(key)} L${x(series.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
-  const tickEvery = Math.ceil(series.length / 7);
+  const respPts = series.map((s, i) => ({ x: x(i), y: y(s.responses) }));
+  const respLine = smoothPath(respPts);
+  const respArea = `${respLine} L${x(series.length - 1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
+  const barW = Math.max(2, Math.min(18, step * 0.55));
+  const tickEvery = Math.ceil(series.length / 8);
 
   // ── heatmap geometry ──
   const startDow = dates.length ? parse(dates[0]).getDay() : 0;
@@ -108,6 +154,9 @@ export default function DashboardAnalytics({
   const heatMax = Math.max(1, ...series.map((s) => s[metric]));
   const colors = metric === "responses" ? RESP_COLORS : CREATED_COLORS;
   const level = (v: number) => (v === 0 ? 0 : Math.min(4, Math.ceil((4 * v) / heatMax)));
+  const cellH = weeks <= 15 ? 36 : weeks <= 20 ? 30 : 24;
+  const showNumbers = weeks <= 20;
+  const GAP = 4;
   const monthLabels: { col: number; label: string }[] = [];
   let lastMonth = -1;
   cells.forEach((d, idx) => {
@@ -134,25 +183,32 @@ export default function DashboardAnalytics({
           tint="bg-amber-50"
           label={`Responses · last ${range} days`}
           value={data ? sumResponses : "—"}
+          hint={data ? `${avg.toFixed(1)} per day on average` : undefined}
         />
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      {/* Trend */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {/* Activity */}
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
           <div>
             <h3 className="text-base font-semibold text-slate-900">Activity</h3>
-            <p className="text-sm text-slate-500">
-              {sumCreated} created · {sumResponses} responded — click a day for details
-            </p>
+            <p className="text-sm text-slate-500 mt-0.5">Click any day for details.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 text-xs text-slate-600">
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500" /> Responded</span>
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Created</span>
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowResp(!showResp)}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition ${showResp ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-400 line-through"}`}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ background: IND }} /> Responded · {sumResponses}
+            </button>
+            <button
+              onClick={() => setShowCreated(!showCreated)}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition ${showCreated ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-400 line-through"}`}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ background: EMR }} /> Created · {sumCreated}
+            </button>
             <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
               {RANGES.map((r) => (
                 <button
@@ -169,37 +225,63 @@ export default function DashboardAnalytics({
 
         <div className="relative">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto select-none" onMouseLeave={() => setHover(null)}>
+            <defs>
+              <linearGradient id="gResp" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={IND} stopOpacity="0.32" />
+                <stop offset="100%" stopColor={IND} stopOpacity="0.02" />
+              </linearGradient>
+              <linearGradient id="gBar" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={EMR} stopOpacity="0.95" />
+                <stop offset="100%" stopColor={EMR} stopOpacity="0.55" />
+              </linearGradient>
+            </defs>
+
             {[0, 1, 2, 3, 4].map((i) => {
               const v = (niceMax / 4) * i;
               return (
                 <g key={i}>
-                  <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#e2e8f0" strokeDasharray={i === 0 ? undefined : "3 4"} />
-                  <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="10" fill="#94a3b8">{Math.round(v)}</text>
+                  <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={i === 0 ? "#cbd5e1" : "#eef2f7"} />
+                  <text x={padL - 10} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#94a3b8">
+                    {Math.round(v)}
+                  </text>
                 </g>
               );
             })}
+
             {series.map((s, i) =>
-              i % tickEvery === 0 ? (
-                <text key={s.date} x={x(i)} y={H - 8} textAnchor="middle" fontSize="10" fill="#94a3b8">
-                  {format(parse(s.date), "MMM d")}
+              i % tickEvery === 0 || i === series.length - 1 ? (
+                <text key={s.date} x={x(i)} y={H - 8} textAnchor={i === series.length - 1 ? "end" : "middle"} fontSize="11" fill="#94a3b8">
+                  {s.date === today ? "Today" : format(parse(s.date), "MMM d")}
                 </text>
               ) : null
             )}
 
-            <path d={area("created")} fill="#10b981" opacity="0.10" />
-            <path d={area("responses")} fill="#6366f1" opacity="0.12" />
-            <path d={line("created")} fill="none" stroke="#10b981" strokeWidth="2" strokeLinejoin="round" />
-            <path d={line("responses")} fill="none" stroke="#6366f1" strokeWidth="2" strokeLinejoin="round" />
-
             {selected && (() => {
               const i = dates.indexOf(selected);
-              return i >= 0 ? <rect x={padL + i * step} y={padT} width={step} height={plotH} fill="#6366f1" opacity="0.12" /> : null;
+              return i >= 0 ? <rect x={padL + i * step} y={padT} width={step} height={plotH} fill={IND} opacity="0.10" rx="3" /> : null;
             })()}
+
+            {showCreated &&
+              series.map((s, i) =>
+                s.created > 0 ? (
+                  <rect key={s.date} x={x(i) - barW / 2} y={y(s.created)} width={barW} height={y(0) - y(s.created)} rx="3" fill="url(#gBar)" />
+                ) : null
+              )}
+
+            {showResp && (
+              <>
+                <path d={respArea} fill="url(#gResp)" />
+                <path d={respLine} fill="none" stroke={IND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                {series.map((s, i) =>
+                  s.responses > 0 ? <circle key={s.date} cx={x(i)} cy={y(s.responses)} r="3" fill="#fff" stroke={IND} strokeWidth="2" /> : null
+                )}
+              </>
+            )}
+
             {hover !== null && (
               <>
                 <line x1={x(hover)} x2={x(hover)} y1={padT} y2={padT + plotH} stroke="#94a3b8" strokeDasharray="3 3" />
-                <circle cx={x(hover)} cy={y(series[hover].responses)} r="4" fill="#6366f1" stroke="#fff" strokeWidth="2" />
-                <circle cx={x(hover)} cy={y(series[hover].created)} r="4" fill="#10b981" stroke="#fff" strokeWidth="2" />
+                {showResp && <circle cx={x(hover)} cy={y(series[hover].responses)} r="5.5" fill={IND} stroke="#fff" strokeWidth="2.5" />}
               </>
             )}
 
@@ -220,30 +302,51 @@ export default function DashboardAnalytics({
 
           {hoverSeries && hover !== null && (
             <div
-              className="pointer-events-none absolute top-2 z-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg"
-              style={{ left: `${(x(hover) / W) * 100}%`, transform: `translateX(${hover > series.length / 2 ? "-105%" : "5%"})` }}
+              className="pointer-events-none absolute top-1 z-10 min-w-[150px] rounded-xl border border-slate-200 bg-white/95 backdrop-blur px-3.5 py-2.5 text-xs shadow-xl"
+              style={{ left: `${(x(hover) / W) * 100}%`, transform: `translateX(${hover > series.length / 2 ? "-108%" : "8%"})` }}
             >
-              <div className="font-medium text-slate-900 mb-1">{format(parse(hoverSeries.date), "EEE, MMM d")}</div>
-              <div className="flex items-center gap-1.5 text-slate-600"><span className="h-2 w-2 rounded-full bg-indigo-500" /> {hoverSeries.responses} responded</div>
-              <div className="flex items-center gap-1.5 text-slate-600"><span className="h-2 w-2 rounded-full bg-emerald-500" /> {hoverSeries.created} created</div>
+              <div className="font-semibold text-slate-900 mb-1.5">{format(parse(hoverSeries.date), "EEE, MMM d")}</div>
+              <div className="flex items-center justify-between gap-4 text-slate-600">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: IND }} /> Responded</span>
+                <span className="font-semibold text-slate-900 tabular-nums">{hoverSeries.responses}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 text-slate-600 mt-0.5">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: EMR }} /> Created</span>
+                <span className="font-semibold text-slate-900 tabular-nums">{hoverSeries.created}</span>
+              </div>
             </div>
           )}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t border-slate-100 pt-4 text-sm">
+          <div className="flex items-center gap-2 text-slate-500">
+            <Flame className="h-4 w-4 text-amber-500" />
+            Busiest day:{" "}
+            <span className="font-medium text-slate-900">
+              {peak && peak.responses > 0 ? `${format(parse(peak.date), "MMM d")} (${peak.responses})` : "—"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-500">
+            <CalendarDays className="h-4 w-4 text-indigo-500" />
+            Active days:{" "}
+            <span className="font-medium text-slate-900">{series.filter((s) => s.responses > 0 || s.created > 0).length} of {range}</span>
+          </div>
         </div>
       </div>
 
       {/* Heatmap */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
             <h3 className="text-base font-semibold text-slate-900">Heatmap</h3>
-            <p className="text-sm text-slate-500">Daily {metric === "responses" ? "responses received" : "forms created"}</p>
+            <p className="text-sm text-slate-500 mt-0.5">Daily {metric === "responses" ? "responses received" : "forms created"} · last {range} days</p>
           </div>
           <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
             {(["responses", "created"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMetric(m)}
-                className={`px-3 py-1 text-xs font-medium rounded-md capitalize ${metric === m ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
+                className={`px-3 py-1 text-xs font-medium rounded-md ${metric === m ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
               >
                 {m === "responses" ? "Responded" : "Created"}
               </button>
@@ -251,37 +354,65 @@ export default function DashboardAnalytics({
           </div>
         </div>
 
-        <div className="overflow-x-auto pb-1">
-          <div className="inline-block">
-            <div className="relative h-4 mb-1 text-[10px] text-slate-400" style={{ width: weeks * 16 }}>
+        <div className="flex gap-3">
+          {/* weekday labels */}
+          <div className="shrink-0 pt-[22px] text-[11px] text-slate-400" style={{ display: "grid", gridTemplateRows: `repeat(7, ${cellH}px)`, gap: GAP }}>
+            {["", "Mon", "", "Wed", "", "Fri", ""].map((l, i) => (
+              <div key={i} className="flex items-center justify-end pr-1">{l}</div>
+            ))}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {/* month labels */}
+            <div className="h-[18px] mb-1 grid text-[11px] text-slate-400" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`, columnGap: GAP }}>
               {monthLabels.map((m) => (
-                <span key={m.col} className="absolute" style={{ left: m.col * 16 }}>{m.label}</span>
+                <span key={m.col} style={{ gridColumn: `${m.col + 1} / span 3` }} className="whitespace-nowrap">
+                  {m.label}
+                </span>
               ))}
             </div>
-            <div className="grid gap-[3px]" style={{ gridAutoFlow: "column", gridTemplateRows: "repeat(7, 13px)", gridAutoColumns: "13px" }}>
+            {/* cells fill the full card width */}
+            <div
+              className="grid"
+              style={{
+                gridAutoFlow: "column",
+                gridTemplateRows: `repeat(7, ${cellH}px)`,
+                gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`,
+                gap: GAP,
+              }}
+            >
               {cells.map((d, idx) => {
                 if (!d) return <div key={`pad-${idx}`} />;
                 const v = byDate.get(d)?.[metric === "responses" ? "responses_count" : "created_count"] || 0;
+                const lv = level(v);
                 return (
                   <button
                     key={d}
                     onClick={() => setSelected(d === selected ? null : d)}
                     title={`${v} ${metric === "responses" ? "response" : "form"}${v === 1 ? "" : "s"} · ${format(parse(d), "EEE, MMM d, yyyy")}`}
-                    className={`h-[13px] w-[13px] rounded-[3px] transition-transform hover:scale-125 focus:outline-none ${selected === d ? "ring-2 ring-slate-900 ring-offset-1" : ""}`}
-                    style={{ backgroundColor: colors[level(v)] }}
+                    className={`w-full h-full rounded-md flex items-center justify-center text-[11px] font-medium transition-all hover:brightness-95 hover:scale-[1.06] focus:outline-none ${
+                      selected === d ? "ring-2 ring-slate-900 ring-offset-1" : d === today ? "ring-1 ring-slate-400" : ""
+                    }`}
+                    style={{ backgroundColor: colors[lv], color: lv >= 3 ? "#fff" : "#475569" }}
                     aria-label={`${format(parse(d), "MMM d")}: ${v}`}
-                  />
+                  >
+                    {showNumbers && v > 0 ? v : ""}
+                  </button>
                 );
               })}
             </div>
           </div>
         </div>
-        <div className="mt-3 flex items-center justify-end gap-1.5 text-[11px] text-slate-400">
-          Less
-          {colors.map((c) => (
-            <span key={c} className="h-[11px] w-[11px] rounded-[3px]" style={{ backgroundColor: c }} />
-          ))}
-          More
+
+        <div className="mt-4 flex items-center justify-between text-[11px] text-slate-400">
+          <span>Ring marks today</span>
+          <span className="flex items-center gap-1.5">
+            Less
+            {colors.map((c) => (
+              <span key={c} className="h-3 w-3 rounded-[4px] border border-slate-200" style={{ backgroundColor: c }} />
+            ))}
+            More
+          </span>
         </div>
       </div>
 

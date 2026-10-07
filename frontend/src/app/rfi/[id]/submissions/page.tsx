@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { fetchRFI, fetchSubmissions, RFI, Submission } from "@/lib/api";
 import { format } from "date-fns";
 import { fieldsForContent, buildRows } from "@/lib/submission-fields";
+import { buildExportTable } from "@/lib/export";
+import ExportMenu from "@/components/export-menu";
 
 
 export default function SubmissionsPage() {
@@ -91,12 +93,25 @@ export default function SubmissionsPage() {
                 )}
               </p>
             </div>
-            <button
-              onClick={loadData}
-              className="text-sm text-blue-600 hover:text-blue-800 px-3 py-1 border border-blue-200 rounded-md hover:bg-blue-50 transition"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              <ExportMenu
+                disabled={submissions.length === 0}
+                baseName={rfi?.subject || "responses"}
+                getRows={() =>
+                  buildExportTable(
+                    submissions.map((s) => ({ ...s, rfi_subject: rfi?.subject })),
+                    () => formFields,
+                    rfi?.subject
+                  )
+                }
+              />
+              <button
+                onClick={loadData}
+                className="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 border border-blue-200 rounded-lg hover:bg-blue-50 transition"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
         </div>
       </header>

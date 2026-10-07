@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchAllSubmissions, fetchRFIs, RFI, SubmissionWithRFI } from "@/lib/api";
 import { buildRows, fieldsForContent, FieldInfo } from "@/lib/submission-fields";
+import { buildExportTable } from "@/lib/export";
+import ExportMenu from "@/components/export-menu";
 
 const PAGE = 25;
 
@@ -144,6 +146,11 @@ export default function ResponsesPanel({
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
+            <ExportMenu
+              disabled={filtered.length === 0}
+              baseName={formFilter ? rfiById.get(formFilter)?.subject || "responses" : "all_responses"}
+              getRows={() => buildExportTable(filtered, fieldsFor)}
+            />
           </div>
           {dateFilter && (
             <div className="mt-3 flex items-center gap-2 text-sm">

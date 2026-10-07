@@ -13,6 +13,7 @@ import {
 import { format } from "date-fns";
 import AppHeader from "@/components/app-header";
 import FolderSidebar from "@/components/folder-sidebar";
+import RfiThumbnail from "@/components/rfi-thumbnail";
 
 const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> = {
   draft: "draft",
@@ -148,7 +149,8 @@ export default function WorkspacePage() {
               {rfis.map((rfi) => {
                 const editPath = getEditPath(rfi);
                 return (
-                  <div key={rfi.id} className="flex items-center justify-between py-4 px-6">
+                  <div key={rfi.id} className="flex items-center gap-4 py-4 px-6">
+                    <RfiThumbnail rfi={rfi} onClick={() => router.push(`/rfi/${rfi.id}`)} />
                     <div className="flex-1 min-w-0 mr-4">
                       <div className="flex items-center gap-3 mb-1">
                         <h4 className="font-medium truncate">{rfi.subject}</h4>

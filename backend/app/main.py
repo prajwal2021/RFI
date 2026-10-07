@@ -7,7 +7,7 @@ from sqlalchemy import text
 from app.auth import seed_admin
 from app.config import settings
 from app.database import engine, Base, async_session
-from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics
+from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups
 
 
 MIGRATIONS = [
@@ -15,6 +15,10 @@ MIGRATIONS = [
     "ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL",
     "ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organisations(id) ON DELETE SET NULL",
     "ALTER TABLE rfis ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL",
+    "ALTER TABLE rfis ADD COLUMN IF NOT EXISTS opens_at TIMESTAMPTZ",
+    "ALTER TABLE rfis ADD COLUMN IF NOT EXISTS closes_at TIMESTAMPTZ",
+    "ALTER TABLE rfis ADD COLUMN IF NOT EXISTS max_responses INTEGER",
+    "ALTER TABLE rfis ADD COLUMN IF NOT EXISTS thank_you_message TEXT",
 ]
 
 
@@ -50,6 +54,8 @@ app.include_router(auth.router)
 app.include_router(orgs.router)
 app.include_router(admin_db.router)
 app.include_router(analytics.router)
+app.include_router(admin_audit.router)
+app.include_router(admin_backups.router)
 app.include_router(rfis.router)
 app.include_router(workspaces.router)
 app.include_router(submissions.router)

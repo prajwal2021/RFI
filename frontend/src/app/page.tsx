@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import AppHeader from "@/components/app-header";
 import DashboardAnalytics from "@/components/dashboard-analytics";
 import FolderSidebar from "@/components/folder-sidebar";
+import RfiThumbnail from "@/components/rfi-thumbnail";
 import ResponsesPanel from "@/components/responses-panel";
 
 const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> = {
@@ -371,7 +372,8 @@ export default function DashboardPage() {
                       {filteredRFIs.map((rfi) => {
                         const editPath = getEditPath(rfi);
                         return (
-                          <div key={rfi.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                          <div key={rfi.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                            <RfiThumbnail rfi={rfi} onClick={() => router.push(`/rfi/${rfi.id}`)} />
                             <div className="flex-1 min-w-0 mr-4">
                               <div className="flex items-center gap-3 mb-1">
                                 <h4 className="font-medium text-foreground truncate">{rfi.subject}</h4>

@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import ProfileMenu from "@/components/profile-menu";
+import FormSettingsDialog from "@/components/form-settings-dialog";
 import { fetchRFI, fetchSubmissions, publishRFI, unpublishRFI, getEditPath, RFI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Pencil, Globe, GlobeLock, Copy, ExternalLink, FileText } from "lucide-react";
+import { ArrowLeft, Pencil, Globe, GlobeLock, Copy, ExternalLink, FileText, Settings2 } from "lucide-react";
 import { format } from "date-fns";
 
 const SurveyRunner = dynamic(() => import("@/components/surveyjs/survey-runner"), { ssr: false });
@@ -29,6 +30,7 @@ export default function ViewRFIPage() {
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [submissionCount, setSubmissionCount] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -127,6 +129,15 @@ export default function ViewRFIPage() {
                   Created by {rfi.created_by} on{" "}
                   {format(new Date(rfi.created_at), "MMM d, yyyy 'at' h:mm a")}
                 </p>
+                {(rfi.opens_at || rfi.closes_at || rfi.max_responses) && (
+                  <p className="text-xs text-indigo-600 mt-0.5">
+                    {rfi.opens_at && `Opens ${format(new Date(rfi.opens_at), "MMM d, h:mm a")}`}
+                    {rfi.opens_at && (rfi.closes_at || rfi.max_responses) && " · "}
+                    {rfi.closes_at && `Closes ${format(new Date(rfi.closes_at), "MMM d, h:mm a")}`}
+                    {rfi.closes_at && rfi.max_responses && " · "}
+                    {rfi.max_responses && `Limit ${submissionCount}/${rfi.max_responses} responses`}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -172,6 +183,10 @@ export default function ViewRFIPage() {
                     {submissionCount}
                   </span>
                 )}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+                <Settings2 className="h-4 w-4 mr-1" />
+                Settings
               </Button>
               {getEditPath(rfi) && (
                 <Button
@@ -220,6 +235,15 @@ export default function ViewRFIPage() {
           </div>
         )}
       </main>
+
+      {showSettings && (
+        <FormSettingsDialog
+          rfi={rfi}
+          responseCount={submissionCount}
+          onClose={() => setShowSettings(false)}
+          onSaved={(updated) => setRfi({ ...rfi, ...updated })}
+        />
+      )}
     </div>
   );
 }

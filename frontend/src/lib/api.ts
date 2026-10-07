@@ -21,6 +21,10 @@ export interface RFI {
   is_published: boolean;
   publish_key: string | null;
   workspace_id: string | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  max_responses: number | null;
+  thank_you_message: string | null;
   created_at: string;
   updated_at: string;
   responses: RFIResponse[];
@@ -38,6 +42,11 @@ export interface Submission {
 export interface PublicRFI {
   subject: string;
   content: { html?: string; css?: string; surveyDefinition?: any; surveyTheme?: any } | null;
+  thank_you_message?: string | null;
+  opens_at?: string | null;
+  closes_at?: string | null;
+  accepting?: boolean;
+  closed_reason?: string | null;
 }
 
 /** Editor route for an item, or null when it has no editor (e.g. legacy Visual RFI items). */
@@ -120,14 +129,24 @@ export async function createRFI(data: {
 
 export async function updateRFI(
   id: string,
-  data: Partial<Pick<RFI, "subject" | "question" | "status" | "assigned_to" | "content">>
+  data: Partial<Pick<RFI, "subject" | "question" | "status" | "assigned_to" | "content" | "opens_at" | "closes_at" | "max_responses" | "thank_you_message">>
 ): Promise<RFI> {
   const res = await apiFetch(`${API_BASE}/rfis/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Failed to update RFI");
+  if (!res.ok) {
+    let detail = "Failed to update RFI";
+    try {
+      const body = await res.json();
+      if (Array.isArray(body?.detail) && body.detail[0]?.msg) detail = String(body.detail[0].msg).replace(/^Value error, /, "");
+      else if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(detail);
+  }
   return res.json();
 }
 
@@ -169,7 +188,16 @@ export async function submitPublicRFI(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Failed to submit response");
+  if (!res.ok) {
+    let detail = "Failed to submit response";
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(detail);
+  }
   return res.json();
 }
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import client_ip, record
 from app.auth import create_token, hash_password, require_user, verify_password
 from app.database import get_db
 from app.models import Organisation, User
@@ -40,7 +41,11 @@ async def login(body: LoginIn, request: Request, db: AsyncSession = Depends(get_
     if not ok:
         for k in keys:
             _fail(k)
+        record(db, None, "login_failed", "user", None, email, {"ip": client_ip(request)}, actor_email=email)
+        await db.commit()
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    record(db, user, "login", "user", user.id, user.email, {"ip": client_ip(request)})
+    await db.commit()
     return TokenOut(token=create_token(user), user=UserOut.model_validate(user))
 
 
@@ -63,4 +68,5 @@ async def change_password(
     if len(body.new_password) < 8:
         raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
     user.password_hash = await hash_password(body.new_password)
+    record(db, user, "password_changed", "user", user.id, user.email)
     await db.commit()

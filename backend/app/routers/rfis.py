@@ -1,10 +1,12 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.audit import record
 from app.access import get_accessible_rfi, get_accessible_workspace, rfi_visible_clause
 from app.auth import require_user
 from app.database import get_db
@@ -21,6 +23,24 @@ router = APIRouter(prefix="/api/rfis", tags=["rfis"])
 
 # ── Public endpoints (defined first to avoid path conflicts with /{rfi_id}) ──
 
+def availability(rfi: RFI, response_count: int) -> tuple[bool, str | None]:
+    """Whether a published form is currently accepting responses, and why not."""
+    now = datetime.now(timezone.utc)
+    if rfi.opens_at and now < rfi.opens_at:
+        return False, "This form is not open yet."
+    if rfi.closes_at and now >= rfi.closes_at:
+        return False, "This form is closed and no longer accepting responses."
+    if rfi.max_responses is not None and response_count >= rfi.max_responses:
+        return False, "This form has reached its response limit."
+    return True, None
+
+
+async def _response_count(db: AsyncSession, rfi_id: UUID) -> int:
+    return (
+        await db.execute(select(func.count(RFISubmission.id)).where(RFISubmission.rfi_id == rfi_id))
+    ).scalar_one()
+
+
 @router.get("/public/{publish_key}", response_model=RFIPublicOut)
 async def get_public_rfi(publish_key: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
@@ -29,7 +49,17 @@ async def get_public_rfi(publish_key: str, db: AsyncSession = Depends(get_db)):
     rfi = result.scalar_one_or_none()
     if not rfi:
         raise HTTPException(status_code=404, detail="RFI not found or not published")
-    return rfi
+    count = await _response_count(db, rfi.id) if rfi.max_responses is not None else 0
+    accepting, reason = availability(rfi, count)
+    return RFIPublicOut(
+        subject=rfi.subject,
+        content=rfi.content,
+        thank_you_message=rfi.thank_you_message,
+        opens_at=rfi.opens_at,
+        closes_at=rfi.closes_at,
+        accepting=accepting,
+        closed_reason=reason,
+    )
 
 
 @router.post("/public/{publish_key}/submit", response_model=SubmissionOut, status_code=201)
@@ -38,12 +68,16 @@ async def submit_public_rfi(
     submission_in: SubmissionCreate,
     db: AsyncSession = Depends(get_db),
 ):
+    # Lock the form row so concurrent submissions cannot overshoot max_responses.
     result = await db.execute(
-        select(RFI).where(RFI.publish_key == publish_key, RFI.is_published.is_(True))
+        select(RFI).where(RFI.publish_key == publish_key, RFI.is_published.is_(True)).with_for_update()
     )
     rfi = result.scalar_one_or_none()
     if not rfi:
         raise HTTPException(status_code=404, detail="RFI not found or not published")
+    accepting, reason = availability(rfi, await _response_count(db, rfi.id))
+    if not accepting:
+        raise HTTPException(status_code=403, detail=reason)
 
     submission = RFISubmission(
         rfi_id=rfi.id,
@@ -89,6 +123,8 @@ async def create_rfi(rfi_in: RFICreate, user: User = Depends(require_user), db: 
     data = rfi_in.model_dump(exclude={"created_by"})
     rfi = RFI(**data, created_by=user.email, owner_id=user.id)
     db.add(rfi)
+    await db.flush()
+    record(db, user, "form_created", "rfi", rfi.id, rfi.subject, {"workspace_id": str(rfi.workspace_id) if rfi.workspace_id else None})
     await db.commit()
     await db.refresh(rfi, attribute_names=["responses"])
     return rfi
@@ -104,8 +140,13 @@ async def update_rfi(
     rfi_id: UUID, rfi_in: RFIUpdate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
 ):
     rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
-    for field, value in rfi_in.model_dump(exclude_unset=True).items():
+    changes = rfi_in.model_dump(exclude_unset=True)
+    for field, value in changes.items():
         setattr(rfi, field, value)
+    settings_changed = sorted(set(changes) & {"opens_at", "closes_at", "max_responses", "thank_you_message"})
+    if settings_changed:
+        record(db, user, "form_settings_changed", "rfi", rfi.id, rfi.subject, {"fields": settings_changed})
+    record(db, user, "form_updated", "rfi", rfi.id, rfi.subject, {"fields": sorted(changes)})
     await db.commit()
     await db.refresh(rfi, attribute_names=["responses"])
     return rfi
@@ -114,6 +155,7 @@ async def update_rfi(
 @router.delete("/{rfi_id}", status_code=204)
 async def delete_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
     rfi = await get_accessible_rfi(db, user, rfi_id)
+    record(db, user, "form_deleted", "rfi", rfi.id, rfi.subject)
     await db.delete(rfi)
     await db.commit()
 
@@ -129,6 +171,7 @@ async def publish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: Asyn
     rfi.is_published = True
     if rfi.status == RFIStatus.DRAFT:
         rfi.status = RFIStatus.OPEN
+    record(db, user, "form_published", "rfi", rfi.id, rfi.subject)
     await db.commit()
     await db.refresh(rfi)
     return rfi
@@ -138,6 +181,7 @@ async def publish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: Asyn
 async def unpublish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
     rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
     rfi.is_published = False
+    record(db, user, "form_unpublished", "rfi", rfi.id, rfi.subject)
     await db.commit()
     await db.refresh(rfi, attribute_names=["responses"])
     return rfi
@@ -162,6 +206,7 @@ async def add_response(
     response = RFIResponse(rfi_id=rfi_id, **resp_in.model_dump())
     db.add(response)
     rfi.status = RFIStatus.ANSWERED
+    record(db, user, "rfi_response_added", "rfi", rfi.id, rfi.subject)
     await db.commit()
     await db.refresh(response)
     return response

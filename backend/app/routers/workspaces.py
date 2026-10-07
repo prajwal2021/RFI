@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.access import get_accessible_workspace, workspace_visible_clause
+from app.audit import record
 from app.auth import require_user
 from app.database import get_db
 from app.models import Workspace, RFI, User
@@ -67,6 +68,8 @@ async def create_workspace(
         org_id=user.org_id if ws_in.visibility == "org" else None,
     )
     db.add(ws)
+    await db.flush()
+    record(db, user, "workspace_created", "workspace", ws.id, ws.name, {"visibility": ws.visibility})
     await db.commit()
     return await _workspace_out(db, user, ws.id)
 
@@ -83,8 +86,10 @@ async def update_workspace(
     ws = await get_accessible_workspace(db, user, ws_id)
     if ws.owner_id != user.id and not user.is_admin:
         raise HTTPException(status_code=403, detail="Only the workspace owner can change it")
-    for field, value in ws_in.model_dump(exclude_unset=True).items():
+    changes = ws_in.model_dump(exclude_unset=True)
+    for field, value in changes.items():
         setattr(ws, field, value)
+    record(db, user, "workspace_updated", "workspace", ws.id, ws.name, {"fields": sorted(changes)})
     await db.commit()
     return await _workspace_out(db, user, ws_id)
 
@@ -94,6 +99,7 @@ async def delete_workspace(ws_id: UUID, user: User = Depends(require_user), db: 
     ws = await get_accessible_workspace(db, user, ws_id)
     if ws.owner_id != user.id and not user.is_admin:
         raise HTTPException(status_code=403, detail="Only the workspace owner can delete it")
+    record(db, user, "workspace_deleted", "workspace", ws.id, ws.name, {"visibility": ws.visibility})
     await db.delete(ws)
     await db.commit()
 

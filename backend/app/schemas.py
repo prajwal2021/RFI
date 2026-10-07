@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from app.models import RFIStatus
 
@@ -37,6 +37,16 @@ class RFIUpdate(BaseModel):
     status: RFIStatus | None = None
     assigned_to: str | None = None
     content: dict[str, Any] | None = None
+    opens_at: datetime | None = None
+    closes_at: datetime | None = None
+    max_responses: int | None = Field(default=None, ge=1, le=1_000_000)
+    thank_you_message: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def _window(self):
+        if self.opens_at and self.closes_at and self.closes_at <= self.opens_at:
+            raise ValueError("Close date must be after the open date")
+        return self
 
 
 class RFIOut(BaseModel):
@@ -50,6 +60,10 @@ class RFIOut(BaseModel):
     is_published: bool
     publish_key: str | None
     workspace_id: UUID | None
+    opens_at: datetime | None = None
+    closes_at: datetime | None = None
+    max_responses: int | None = None
+    thank_you_message: str | None = None
     created_at: datetime
     updated_at: datetime
     responses: list[RFIResponseOut] = []
@@ -60,6 +74,11 @@ class RFIOut(BaseModel):
 class RFIPublicOut(BaseModel):
     subject: str
     content: dict[str, Any] | None
+    thank_you_message: str | None = None
+    opens_at: datetime | None = None
+    closes_at: datetime | None = None
+    accepting: bool = True
+    closed_reason: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.audit import record
 from app.auth import hash_password, require_admin
 from app.database import get_db
 from app.models import Organisation, User
@@ -44,6 +45,8 @@ async def create_org(body: OrgCreate, admin: User = Depends(require_admin), db: 
     org = Organisation(name=name, created_by=admin.email)
     db.add(org)
     try:
+        await db.flush()
+        record(db, admin, "org_created", "organisation", org.id, org.name)
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -52,12 +55,16 @@ async def create_org(body: OrgCreate, admin: User = Depends(require_admin), db: 
 
 
 @router.patch("/{org_id}", response_model=OrgOut)
-async def rename_org(org_id: UUID, body: OrgCreate, db: AsyncSession = Depends(get_db)):
+async def rename_org(
+    org_id: UUID, body: OrgCreate, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+):
     org = await _load_org(db, org_id)
     name = body.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Organisation name is required")
+    old_name = org.name
     org.name = name
+    record(db, admin, "org_renamed", "organisation", org.id, name, {"from": old_name})
     try:
         await db.commit()
     except IntegrityError:
@@ -67,17 +74,20 @@ async def rename_org(org_id: UUID, body: OrgCreate, db: AsyncSession = Depends(g
 
 
 @router.delete("/{org_id}", status_code=204)
-async def delete_org(org_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_org(org_id: UUID, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     org = await _load_org(db, org_id)
     if org.users:
         raise HTTPException(status_code=409, detail="Remove the organisation's users before deleting it")
+    record(db, admin, "org_deleted", "organisation", org.id, org.name)
     await db.delete(org)
     await db.commit()
 
 
 @router.post("/{org_id}/users", response_model=UserOut, status_code=201)
-async def add_user(org_id: UUID, body: OrgUserCreate, db: AsyncSession = Depends(get_db)):
-    await _load_org(db, org_id)
+async def add_user(
+    org_id: UUID, body: OrgUserCreate, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+):
+    org = await _load_org(db, org_id)
     email = body.email.strip().lower()
     if not _EMAIL.match(email):
         raise HTTPException(status_code=400, detail="Enter a valid email address")
@@ -91,6 +101,8 @@ async def add_user(org_id: UUID, body: OrgUserCreate, db: AsyncSession = Depends
     )
     db.add(user)
     try:
+        await db.flush()
+        record(db, admin, "user_added", "user", user.id, user.email, {"org": org.name, "is_admin": user.is_admin})
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -122,6 +134,7 @@ async def remove_user(
         admins = (await db.execute(select(func.count(User.id)).where(User.is_admin.is_(True)))).scalar_one()
         if admins <= 1:
             raise HTTPException(status_code=400, detail="Cannot remove the last admin")
+    record(db, admin, "user_removed", "user", user.id, user.email, {"was_admin": user.is_admin})
     await db.delete(user)
     await db.commit()
 
@@ -131,10 +144,12 @@ async def reset_user_password(
     org_id: UUID,
     user_id: UUID,
     body: AdminResetPasswordIn,
+    admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     user = await _member(db, org_id, user_id)
     if len(body.new_password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     user.password_hash = await hash_password(body.new_password)
+    record(db, admin, "user_password_reset", "user", user.id, user.email)
     await db.commit()

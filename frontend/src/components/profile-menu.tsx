@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Database, KeyRound, LogOut, Users, X } from "lucide-react";
+import { Database, DatabaseBackup, KeyRound, LogOut, ScrollText, Users, X } from "lucide-react";
 import { changePassword, getEmail, isAdmin, signOut } from "@/lib/auth";
 
 function ResetPasswordDialog({ onClose }: { onClose: () => void }) {
@@ -138,6 +138,28 @@ export default function ProfileMenu() {
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
             >
               <Database className="h-4 w-4 text-gray-400" /> DB
+            </button>
+          )}
+          {admin && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/audit");
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
+            >
+              <ScrollText className="h-4 w-4 text-gray-400" /> Audit log
+            </button>
+          )}
+          {admin && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/backups");
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
+            >
+              <DatabaseBackup className="h-4 w-4 text-gray-400" /> Backups
             </button>
           )}
           <button
