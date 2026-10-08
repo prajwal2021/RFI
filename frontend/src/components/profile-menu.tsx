@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Database, DatabaseBackup, KeyRound, LogOut, ScrollText, Users, X } from "lucide-react";
+import { Database, DatabaseBackup, ImageIcon, KeyRound, LogOut, ScrollText, Users, X } from "lucide-react";
 import { changePassword, getEmail, isAdmin, signOut } from "@/lib/auth";
 
 function ResetPasswordDialog({ onClose }: { onClose: () => void }) {
@@ -160,6 +160,17 @@ export default function ProfileMenu() {
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
             >
               <DatabaseBackup className="h-4 w-4 text-gray-400" /> Backups
+            </button>
+          )}
+          {admin && (
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push("/images");
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
+            >
+              <ImageIcon className="h-4 w-4 text-gray-400" /> Image library
             </button>
           )}
           <button

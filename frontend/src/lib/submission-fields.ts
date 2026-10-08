@@ -1,4 +1,6 @@
 export interface FieldInfo {
+  type?: string;
+  inputType?: string;
   name: string;
   label: string;
 }
@@ -40,7 +42,7 @@ export function extractFormFields(html: string): FieldInfo[] {
       label = name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     }
 
-    fields.push({ name, label });
+    fields.push({ name, label, type: input.type || el.tagName.toLowerCase() });
   });
 
   return fields;
@@ -54,7 +56,7 @@ export function extractSurveyFields(json: any): FieldInfo[] {
         walk(el.elements);
       } else if (el.type !== "html" && el.type !== "image" && el.name) {
         const title = typeof el.title === "string" ? el.title : el.title?.default;
-        out.push({ name: el.name, label: title || el.name });
+        out.push({ name: el.name, label: title || el.name, type: el.type, inputType: el.inputType });
       }
     }
   };
@@ -111,4 +113,61 @@ export function buildRows(fields: FieldInfo[], data: Record<string, any>): Field
     if (!matched.has(key)) rows.push({ label: formatKey(key), value: formatValue(value) });
   }
   return rows;
+}
+
+// ── SMS eligibility ──
+
+const PHONE_RE = /phone|mobile|cell/i;
+const OPT_RE = /opt[\s_-]*(in|ed)|consent|\bsms\b|text[\s_-]*message|text[\s_-]*alert|receive.*(text|sms)|subscribe/i;
+const NEGATIVE_RE = /^(no|n|false|0|off|unchecked|declined?|opt[\s_-]*out|not?\s+opted)\b/i;
+
+function valueOf(f: FieldInfo, data: Record<string, any>): any {
+  return data[f.name] ?? data[f.label];
+}
+
+function isPhoneField(f: FieldInfo): boolean {
+  return f.type === "tel" || f.inputType === "tel" || f.type === "phone" || PHONE_RE.test(`${f.label} ${f.name}`);
+}
+
+function truthyOptIn(v: any): boolean {
+  if (v === true) return true;
+  if (v === false || v === null || v === undefined) return false;
+  if (Array.isArray(v)) return v.length > 0 && v.every((x) => truthyOptIn(x));
+  const s = String(v).trim();
+  if (!s) return false;
+  return !NEGATIVE_RE.test(s);
+}
+
+export interface SmsEligibility {
+  /** The form has a phone-number field at all (controls whether the button is shown). */
+  hasPhoneField: boolean;
+  phone: string;
+  optedIn: boolean;
+  /** Why the button is disabled, if it is. */
+  reason: string | null;
+}
+
+export function detectSms(fields: FieldInfo[], data: Record<string, any>): SmsEligibility {
+  const phoneFields = fields.filter(isPhoneField);
+  if (phoneFields.length === 0) return { hasPhoneField: false, phone: "", optedIn: false, reason: null };
+
+  let phone = "";
+  for (const f of phoneFields) {
+    const raw = valueOf(f, data);
+    const s = raw === null || raw === undefined ? "" : String(raw).trim();
+    if (s.replace(/\D/g, "").length >= 7) {
+      phone = s;
+      break;
+    }
+  }
+
+  const optFields = fields.filter((f) => !isPhoneField(f) && OPT_RE.test(`${f.label} ${f.name}`));
+  const optedIn = optFields.some((f) => truthyOptIn(valueOf(f, data)));
+
+  let reason: string | null = null;
+  if (!phone) reason = "No phone number was provided";
+  else if (optFields.length === 0) reason = "This form has no SMS opt-in question";
+  else if (!optedIn) reason = "Respondent has not opted in to SMS";
+
+  return { hasPhoneField: true, phone, optedIn, reason };
 }

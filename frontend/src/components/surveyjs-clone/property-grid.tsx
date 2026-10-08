@@ -8,6 +8,8 @@ import {
 } from "./model";
 import { parseAppearance, stringifyAppearance, Appearance } from "./appearance";
 import { FONTS } from "./theme";
+import ImageLibraryModal from "@/components/image-library-modal";
+import { isLibraryUrl } from "@/lib/images";
 
 const inputCls =
   "w-full px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#19b394] focus:ring-1 focus:ring-[#19b394] bg-white";
@@ -158,10 +160,11 @@ export function ColorField({
 }
 
 export function ImageField({
-  label, value, onChange,
+  label, value, onChange, category,
 }: {
-  label: string; value?: string; onChange: (v: string) => void;
+  label: string; value?: string; onChange: (v: string) => void; category?: string;
 }) {
+  const [showLib, setShowLib] = useState(false);
   const upload = (file: File | undefined) => {
     if (!file) return;
     if (file.size > 750 * 1024) {
@@ -173,16 +176,20 @@ export function ImageField({
     reader.readAsDataURL(file);
   };
   const isData = (value || "").startsWith("data:");
+  const isLib = isLibraryUrl(value);
   return (
     <Field label={label}>
       <input
-        value={isData ? "(uploaded image)" : value || ""}
-        readOnly={isData}
+        value={isData ? "(uploaded image)" : isLib ? "(library image)" : value || ""}
+        readOnly={isData || isLib}
         placeholder="Image URL"
         onChange={(e) => onChange(e.target.value)}
         className={inputCls}
       />
       <div className="flex items-center gap-3 mt-1.5">
+        <button type="button" onClick={() => setShowLib(true)} className="text-xs font-semibold" style={{ color: "#19b394" }}>
+          Library…
+        </button>
         <label className="text-xs font-medium cursor-pointer" style={{ color: "#19b394" }}>
           Upload…
           <input type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
@@ -197,6 +204,7 @@ export function ImageField({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={value} alt="" className="mt-2 max-h-20 rounded border border-gray-200" />
       )}
+      {showLib && <ImageLibraryModal initialCategory={category} onPick={onChange} onClose={() => setShowLib(false)} />}
     </Field>
   );
 }
@@ -226,7 +234,7 @@ function AppearanceEditor({
           ))}
         </select>
       </Field>
-      <ImageField label="Background image" value={a.backgroundImage} onChange={(v) => upd({ backgroundImage: v })} />
+      <ImageField label="Background image" category="Backgrounds" value={a.backgroundImage} onChange={(v) => upd({ backgroundImage: v })} />
     </div>
   );
 }
@@ -411,7 +419,7 @@ export default function PropertyGrid({
           <Text label="Complete button text" value={getLoc(json.completeText)} onChange={loc(json, "completeText")} />
         </Section>
         <Section title="Logo">
-          <ImageField label="Logo" value={json.logo} onChange={(v) => onPatch({ logo: v || undefined })} />
+          <ImageField label="Logo" category="Logos" value={json.logo} onChange={(v) => onPatch({ logo: v || undefined })} />
           <Select
             label="Logo position"
             value={json.logoPosition || "left"}

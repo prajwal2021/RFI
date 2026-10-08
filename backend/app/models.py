@@ -3,7 +3,7 @@ import secrets
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, DateTime, Enum as SAEnum, ForeignKey, Boolean, Integer, Index, false
+from sqlalchemy import String, Text, DateTime, Enum as SAEnum, ForeignKey, Boolean, Integer, Index, LargeBinary, false
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -134,3 +134,20 @@ class AuditLog(Base):
     entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     entity_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+
+class ImageAsset(Base):
+    """Shared image library. Built-in rows are seeded at startup; admins can upload more."""
+
+    __tablename__ = "image_assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    category: Mapped[str] = mapped_column(String(40), nullable=False, default="Logos")
+    mime: Mapped[str] = mapped_column(String(60), nullable=False)
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -3,15 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, RefreshCw, Search, Inbox, ExternalLink, X } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw, Search, Inbox, ExternalLink, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchAllSubmissions, fetchRFIs, RFI, SubmissionWithRFI } from "@/lib/api";
-import { buildRows, fieldsForContent, FieldInfo } from "@/lib/submission-fields";
+import { buildRows, detectSms, fieldsForContent, FieldInfo } from "@/lib/submission-fields";
 import { buildExportTable } from "@/lib/export";
 import ExportMenu from "@/components/export-menu";
+import DateRangePicker from "@/components/date-range-picker";
 
 const PAGE = 25;
 
@@ -92,6 +93,17 @@ export default function ResponsesPanel({
     return Array.from(map.values()).sort((a, b) => a.subject.localeCompare(b.subject));
   }, [subs]);
 
+  // Per-day response counts (for the form currently selected) shown inside the calendar.
+  const dayCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const s of subs) {
+      if (formFilter && s.rfi_id !== formFilter) continue;
+      const k = localYmd(s.created_at);
+      m[k] = (m[k] || 0) + 1;
+    }
+    return m;
+  }, [subs, formFilter]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return subs.filter((s) => {
@@ -150,6 +162,14 @@ export default function ResponsesPanel({
                 </option>
               ))}
             </select>
+            <DateRangePicker
+              value={dateFilter}
+              onChange={(r) => {
+                setDateFilter(r);
+                setShown(PAGE);
+              }}
+              counts={dayCounts}
+            />
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
@@ -159,22 +179,6 @@ export default function ResponsesPanel({
               getRows={() => buildExportTable(filtered, fieldsFor)}
             />
           </div>
-          {dateFilter && (
-            <div className="mt-3 flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 pl-3 pr-1.5 py-1">
-                {dateFilter.from === dateFilter.to
-                  ? format(new Date(`${dateFilter.from}T12:00:00`), "MMM d, yyyy")
-                  : `${format(new Date(`${dateFilter.from}T12:00:00`), "MMM d")} – ${format(new Date(`${dateFilter.to}T12:00:00`), "MMM d, yyyy")}`}
-                <button
-                  onClick={() => setDateFilter(null)}
-                  className="rounded-full p-0.5 hover:bg-indigo-100"
-                  aria-label="Clear date filter"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </span>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -250,14 +254,43 @@ export default function ResponsesPanel({
                         ))}
                       </tbody>
                     </table>
-                    <div className="pt-2 text-right">
-                      <button
-                        onClick={() => router.push(`/rfi/${s.rfi_id}`)}
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        Open form <ExternalLink className="h-3 w-3" />
-                      </button>
-                    </div>
+                    {(() => {
+                      const sms = detectSms(fieldsFor(s.rfi_id), s.data);
+                      return (
+                        <div className="pt-3 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            {sms.hasPhoneField && (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={!(sms.phone && sms.optedIn)}
+                                  title={sms.reason ?? `Send an SMS to ${sms.phone}`}
+                                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground shadow-sm hover:opacity-90 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
+                                >
+                                  <MessageSquare className="h-4 w-4" /> Send SMS
+                                </button>
+                                {sms.phone && <span className="text-sm text-slate-600 tabular-nums">{sms.phone}</span>}
+                                <span
+                                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                                    sms.optedIn
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border-slate-200 bg-slate-50 text-slate-500"
+                                  }`}
+                                >
+                                  {sms.optedIn ? "Opted in" : "Not opted in"}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => router.push(`/rfi/${s.rfi_id}`)}
+                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            Open form <ExternalLink className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </Card>

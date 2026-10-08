@@ -96,7 +96,7 @@ export default function ThemeTab({
         </Group>
 
         <Group title="Background image">
-          <ImageField label="Page background image" value={theme.backgroundImage} onChange={(v) => upd({ backgroundImage: v })} />
+          <ImageField label="Page background image" category="Backgrounds" value={theme.backgroundImage} onChange={(v) => upd({ backgroundImage: v })} />
         </Group>
 
         <button

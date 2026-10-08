@@ -7,7 +7,8 @@ from sqlalchemy import text
 from app.auth import seed_admin
 from app.config import settings
 from app.database import engine, Base, async_session
-from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups
+from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups, images
+from app.seed_images import seed_images
 
 
 MIGRATIONS = [
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
             await conn.execute(text(stmt))
     async with async_session() as db:
         await seed_admin(db)
+        await seed_images(db)
     yield
 
 
@@ -56,6 +58,7 @@ app.include_router(admin_db.router)
 app.include_router(analytics.router)
 app.include_router(admin_audit.router)
 app.include_router(admin_backups.router)
+app.include_router(images.router)
 app.include_router(rfis.router)
 app.include_router(workspaces.router)
 app.include_router(submissions.router)
