@@ -263,7 +263,7 @@ export default function ResponsesPanel({
                               <>
                                 <button
                                   type="button"
-                                  disabled={!(sms.phone && sms.optedIn)}
+                                  disabled={!sms.canSend}
                                   title={sms.reason ?? `Send an SMS to ${sms.phone}`}
                                   className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground shadow-sm hover:opacity-90 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
                                 >
@@ -272,12 +272,12 @@ export default function ResponsesPanel({
                                 {sms.phone && <span className="text-sm text-slate-600 tabular-nums">{sms.phone}</span>}
                                 <span
                                   className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                                    sms.optedIn
+                                    sms.optedIn && sms.hasOptInField
                                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                                       : "border-slate-200 bg-slate-50 text-slate-500"
                                   }`}
                                 >
-                                  {sms.optedIn ? "Opted in" : "Not opted in"}
+                                  {!sms.hasOptInField ? "No SMS opt-in question" : sms.optedIn ? "Agreed to SMS" : "Did not agree to SMS"}
                                 </span>
                               </>
                             )}

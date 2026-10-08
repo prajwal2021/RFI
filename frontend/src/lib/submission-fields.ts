@@ -116,17 +116,31 @@ export function buildRows(fields: FieldInfo[], data: Record<string, any>): Field
 }
 
 // ── SMS eligibility ──
+// Send SMS is enabled only when ALL of these hold:
+//   1. the form has a phone-number field,
+//   2. the form has an SMS opt-in checkbox (a choice question that is specifically about SMS / text messages),
+//   3. this response contains a usable phone number, and
+//   4. the opt-in is checked (a bare "consent"/"subscribe" box does not count).
 
-const PHONE_RE = /phone|mobile|cell/i;
-const OPT_RE = /opt[\s_-]*(in|ed)|consent|\bsms\b|text[\s_-]*message|text[\s_-]*alert|receive.*(text|sms)|subscribe/i;
+// Fields typed as phone inputs win; the label is only a fallback for forms that do not type the field.
+const PHONE_LABEL_RE = /\b(tele)?phone\b|\bmobile\b|\bcell(ular)?\b/i;
+const SMS_OPT_RE =
+  /\bsms\b|\btexts?\b[\s_-]*(messag|alert|updat|notif|remind)|\btexting\b|\btext\s+me\b|\breceive\b.{0,40}\btext|\bopt[\s_-]*in\b.{0,40}\btexts?\b/i;
 const NEGATIVE_RE = /^(no|n|false|0|off|unchecked|declined?|opt[\s_-]*out|not?\s+opted)\b/i;
+
+const CHOICE_TYPES = ["boolean", "checkbox", "radiogroup", "radio"];
+const TEXT_TYPES = ["text", "tel", "phone", "number"];
 
 function valueOf(f: FieldInfo, data: Record<string, any>): any {
   return data[f.name] ?? data[f.label];
 }
 
-function isPhoneField(f: FieldInfo): boolean {
-  return f.type === "tel" || f.inputType === "tel" || f.type === "phone" || PHONE_RE.test(`${f.label} ${f.name}`);
+function isTypedPhone(f: FieldInfo): boolean {
+  return f.type === "tel" || f.inputType === "tel" || f.type === "phone";
+}
+
+function isChoiceLike(f: FieldInfo): boolean {
+  return !f.type || CHOICE_TYPES.includes(f.type);
 }
 
 function truthyOptIn(v: any): boolean {
@@ -139,35 +153,46 @@ function truthyOptIn(v: any): boolean {
 }
 
 export interface SmsEligibility {
-  /** The form has a phone-number field at all (controls whether the button is shown). */
+  /** The form has a phone-number field (controls whether the button is shown at all). */
   hasPhoneField: boolean;
+  /** The form has an SMS opt-in checkbox. */
+  hasOptInField: boolean;
   phone: string;
   optedIn: boolean;
+  /** True only when the button should be enabled. */
+  canSend: boolean;
   /** Why the button is disabled, if it is. */
   reason: string | null;
 }
 
 export function detectSms(fields: FieldInfo[], data: Record<string, any>): SmsEligibility {
-  const phoneFields = fields.filter(isPhoneField);
-  if (phoneFields.length === 0) return { hasPhoneField: false, phone: "", optedIn: false, reason: null };
+  const typed = fields.filter(isTypedPhone);
+  const phoneFields = typed.length
+    ? typed
+    : fields.filter((f) => (!f.type || TEXT_TYPES.includes(f.type)) && PHONE_LABEL_RE.test(`${f.label} ${f.name}`));
+  if (phoneFields.length === 0) {
+    return { hasPhoneField: false, hasOptInField: false, phone: "", optedIn: false, canSend: false, reason: null };
+  }
 
   let phone = "";
   for (const f of phoneFields) {
     const raw = valueOf(f, data);
     const s = raw === null || raw === undefined ? "" : String(raw).trim();
-    if (s.replace(/\D/g, "").length >= 7) {
+    const digits = s.replace(/\D/g, "").length;
+    if (digits >= 7 && digits <= 15) {
       phone = s;
       break;
     }
   }
 
-  const optFields = fields.filter((f) => !isPhoneField(f) && OPT_RE.test(`${f.label} ${f.name}`));
+  const phoneKeys = new Set(phoneFields.map((f) => f.name));
+  const optFields = fields.filter((f) => !phoneKeys.has(f.name) && isChoiceLike(f) && SMS_OPT_RE.test(`${f.label} ${f.name}`));
   const optedIn = optFields.some((f) => truthyOptIn(valueOf(f, data)));
 
   let reason: string | null = null;
-  if (!phone) reason = "No phone number was provided";
-  else if (optFields.length === 0) reason = "This form has no SMS opt-in question";
-  else if (!optedIn) reason = "Respondent has not opted in to SMS";
+  if (optFields.length === 0) reason = "This form has no SMS opt-in checkbox";
+  else if (!phone) reason = "No phone number was provided";
+  else if (!optedIn) reason = "Respondent did not agree to receive SMS";
 
-  return { hasPhoneField: true, phone, optedIn, reason };
+  return { hasPhoneField: true, hasOptInField: optFields.length > 0, phone, optedIn, canSend: reason === null, reason };
 }
