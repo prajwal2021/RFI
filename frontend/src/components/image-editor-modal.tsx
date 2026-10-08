@@ -49,7 +49,7 @@ const CHECKER: React.CSSProperties = {
 function SvgEditor({ source, onApply, onClose }: { source: string; onApply: (dataUrl: string) => void; onClose: () => void }) {
   const originals = useMemo(() => {
     const set = new Set<string>();
-    for (const m of source.matchAll(HEX_RE)) set.add(normHex(m[0]));
+    Array.from(source.matchAll(HEX_RE)).forEach((m) => set.add(normHex(m[0])));
     return Array.from(set);
   }, [source]);
 
