@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { fetchRFI } from "@/lib/api";
 import { FormDef } from "@/components/form-builder/html-generator";
@@ -14,10 +14,15 @@ const FormBuilder = dynamic(
 export default function EditFormPage() {
   const params = useParams();
   const id = params.id as string;
+  const router = useRouter();
   const [formDef, setFormDef] = useState<FormDef | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (id === "new") {
+      router.replace("/surveyjs-clone/new");
+      return;
+    }
     fetchRFI(id)
       .then((rfi) => {
         if (rfi.content?.formDefinition) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { fetchRFI } from "@/lib/api";
 
@@ -13,11 +13,16 @@ const SurveyJSCreator = dynamic(
 export default function EditSurveyPage() {
   const params = useParams();
   const id = params.id as string;
+  const router = useRouter();
   const [json, setJson] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (id === "new") {
+      router.replace("/surveyjs-clone/new");
+      return;
+    }
     fetchRFI(id)
       .then((rfi) => {
         setJson(rfi.content?.surveyDefinition || null);
