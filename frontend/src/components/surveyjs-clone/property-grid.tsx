@@ -447,7 +447,7 @@ export default function PropertyGrid({
           <Area label="Completed page HTML" value={getLoc(json.completedHtml)} onChange={loc(json, "completedHtml")} rows={3} mono />
         </Section>
         <Section title="Required">
-          <Text label="Required mark" value={json.requiredMark} onChange={set("requiredMark")} placeholder="*" />
+          <Text label="Required mark" value={json.requiredText} onChange={set("requiredText")} placeholder="*" />
           <Text label="Question title pattern" value={json.questionTitlePattern} onChange={set("questionTitlePattern")} />
         </Section>
       </div>
