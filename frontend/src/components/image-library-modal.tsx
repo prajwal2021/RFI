@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
-import { fetchImages, LibraryImage } from "@/lib/images";
+import { fetchImages, LibraryImage, sortCategories } from "@/lib/images";
 
 export default function ImageLibraryModal({
   initialCategory,
@@ -26,7 +26,7 @@ export default function ImageLibraryModal({
 
   const categories = useMemo(() => {
     const set = new Set((images || []).map((i) => i.category));
-    return ["All", ...Array.from(set).sort()];
+    return ["All", ...sortCategories(Array.from(set))];
   }, [images]);
 
   const shown = (images || []).filter(

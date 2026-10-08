@@ -12,7 +12,7 @@ from app.auth import require_user
 from app.database import get_db
 from app.models import RFI, RFIResponse, RFISubmission, RFIStatus, User, Workspace, generate_publish_key
 from app.schemas import (
-    RFICreate, RFIUpdate, RFIOut,
+    RFICreate, RFIUpdate, RFIOut, RFIMove,
     RFIResponseCreate, RFIResponseOut,
     RFIPublicOut, RFIPublishResult,
     SubmissionCreate, SubmissionOut,
@@ -149,6 +149,37 @@ async def update_rfi(
     record(db, user, "form_updated", "rfi", rfi.id, rfi.subject, {"fields": sorted(changes)})
     await db.commit()
     await db.refresh(rfi)  # onupdate columns (updated_at) are expired by the UPDATE
+    await db.refresh(rfi, attribute_names=["responses"])
+    return rfi
+
+
+@router.post("/{rfi_id}/move", response_model=RFIOut)
+async def move_rfi(
+    rfi_id: UUID, body: RFIMove, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+):
+    """Move a form to another workspace (or to 'unfiled' with workspace_id = null)."""
+    rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
+    if body.workspace_id == rfi.workspace_id:
+        return rfi
+
+    source = None
+    if rfi.workspace_id:
+        source = (await db.execute(select(Workspace).where(Workspace.id == rfi.workspace_id))).scalar_one_or_none()
+    can_move = user.is_admin or rfi.owner_id == user.id or (source is not None and source.owner_id == user.id)
+    if not can_move:
+        raise HTTPException(status_code=403, detail="Only the form's owner or its workspace owner can move it")
+
+    dest = None
+    if body.workspace_id:
+        dest = await get_accessible_workspace(db, user, body.workspace_id)
+
+    rfi.workspace_id = body.workspace_id
+    record(
+        db, user, "form_moved", "rfi", rfi.id, rfi.subject,
+        {"from": source.name if source else "Unfiled", "to": dest.name if dest else "Unfiled"},
+    )
+    await db.commit()
+    await db.refresh(rfi)
     await db.refresh(rfi, attribute_names=["responses"])
     return rfi
 

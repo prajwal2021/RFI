@@ -37,6 +37,13 @@ async def list_orgs(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
+@router.get("/unassigned", response_model=list[UserOut])
+async def unassigned_users(db: AsyncSession = Depends(get_db)):
+    """Users who are not in any organisation (e.g. platform administrators)."""
+    result = await db.execute(select(User).where(User.org_id.is_(None)).order_by(User.is_admin.desc(), User.email))
+    return result.scalars().all()
+
+
 @router.post("/", response_model=OrgOut, status_code=201)
 async def create_org(body: OrgCreate, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     name = body.name.strip()

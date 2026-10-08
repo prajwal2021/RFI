@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
-  ArrowLeft, Building2, KeyRound, Plus, Shield, ShieldAlert, Trash2, UserPlus, Users,
+  ArrowLeft, Building2, KeyRound, List, Network, Plus, Shield, ShieldAlert, Trash2, UserPlus, Users,
 } from "lucide-react";
 import AppHeader from "@/components/app-header";
+import UserTree from "@/components/user-tree";
 import {
-  Organisation, addOrgUser, createOrg, deleteOrg, fetchOrgs, isAdmin, removeOrgUser, renameOrg,
+  Organisation, OrgUser, addOrgUser, createOrg, deleteOrg, fetchOrgs, fetchUnassignedUsers, isAdmin, removeOrgUser, renameOrg,
   resetOrgUserPassword,
 } from "@/lib/auth";
 
@@ -19,6 +20,8 @@ export default function ManageUsersPage() {
   const router = useRouter();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [orgs, setOrgs] = useState<Organisation[]>([]);
+  const [unassigned, setUnassigned] = useState<OrgUser[]>([]);
+  const [view, setView] = useState<"list" | "tree">("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -42,6 +45,7 @@ export default function ManageUsersPage() {
     try {
       const data = await fetchOrgs();
       setOrgs(data);
+      fetchUnassignedUsers().then(setUnassigned).catch(() => setUnassigned([]));
       setSelectedId((cur) => (cur && data.some((o) => o.id === cur) ? cur : data[0]?.id ?? null));
       setError(null);
     } catch (e) {
@@ -93,14 +97,30 @@ export default function ManageUsersPage() {
       />
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Manage users</h1>
-          <p className="text-sm text-slate-500">Create organisations and add the people who belong to them.</p>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">Manage users</h1>
+            <p className="text-sm text-slate-500">Create organisations and add the people who belong to them.</p>
+          </div>
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+            {([["list", "List", List], ["tree", "Tree", Network]] as const).map(([key, text, Icon]) => (
+              <button
+                key={key}
+                onClick={() => setView(key)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-md ${view === key ? "bg-primary text-primary-foreground shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+              >
+                <Icon className="h-4 w-4" /> {text}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
         {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>}
 
+        {view === "tree" ? (
+          <UserTree orgs={orgs} unassigned={unassigned} onOpenOrg={(id) => { setSelectedId(id); setView("list"); }} />
+        ) : (
         <div className="grid lg:grid-cols-[300px_1fr] gap-6 items-start">
           {/* Organisations */}
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -380,6 +400,7 @@ export default function ManageUsersPage() {
             </div>
           )}
         </div>
+        )}
       </main>
     </div>
   );

@@ -287,3 +287,22 @@ export async function fetchAnalytics(days: number): Promise<Analytics> {
   if (!res.ok) throw new Error("Failed to load analytics");
   return res.json();
 }
+
+export async function moveRFI(id: string, workspaceId: string | null): Promise<RFI> {
+  const res = await apiFetch(`${API_BASE}/rfis/${id}/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ workspace_id: workspaceId }),
+  });
+  if (!res.ok) {
+    let detail = "Could not move the form";
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}

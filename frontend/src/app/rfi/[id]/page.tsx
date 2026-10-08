@@ -5,10 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import ProfileMenu from "@/components/profile-menu";
 import FormSettingsDialog from "@/components/form-settings-dialog";
-import { fetchRFI, fetchSubmissions, publishRFI, unpublishRFI, getEditPath, RFI } from "@/lib/api";
+import MoveRfiDialog from "@/components/move-rfi-dialog";
+import { fetchRFI, fetchSubmissions, fetchWorkspaces, publishRFI, unpublishRFI, getEditPath, RFI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Pencil, Globe, GlobeLock, Copy, ExternalLink, FileText, Settings2 } from "lucide-react";
+import { ArrowLeft, Pencil, Globe, GlobeLock, Copy, ExternalLink, FileText, Settings2, FolderInput, Folder } from "lucide-react";
 import { format } from "date-fns";
 
 const SurveyRunner = dynamic(() => import("@/components/surveyjs/survey-runner"), { ssr: false });
@@ -31,11 +32,16 @@ export default function ViewRFIPage() {
   const [copied, setCopied] = useState(false);
   const [submissionCount, setSubmissionCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showMove, setShowMove] = useState(false);
+  const [wsName, setWsName] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
         const data = await fetchRFI(id);
+        if (data.workspace_id) {
+          fetchWorkspaces().then((ws) => setWsName(ws.find((w) => w.id === data.workspace_id)?.name ?? null)).catch(() => undefined);
+        }
         setRfi(data);
         if (data.is_published) {
           const subs = await fetchSubmissions(id);
@@ -124,6 +130,10 @@ export default function ViewRFIPage() {
                       Published
                     </Badge>
                   )}
+                  <Badge variant="draft" className="bg-slate-100 text-slate-600">
+                    <Folder className="h-3 w-3 mr-1" />
+                    {rfi.workspace_id ? wsName ?? "Workspace" : "Unfiled"}
+                  </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Created by {rfi.created_by} on{" "}
@@ -184,6 +194,10 @@ export default function ViewRFIPage() {
                   </span>
                 )}
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowMove(true)}>
+                <FolderInput className="h-4 w-4 mr-1" />
+                Move
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
                 <Settings2 className="h-4 w-4 mr-1" />
                 Settings
@@ -235,6 +249,17 @@ export default function ViewRFIPage() {
           </div>
         )}
       </main>
+
+      {showMove && (
+        <MoveRfiDialog
+          rfi={rfi}
+          onClose={() => setShowMove(false)}
+          onMoved={(wsId, name) => {
+            setRfi({ ...rfi, workspace_id: wsId });
+            setWsName(name);
+          }}
+        />
+      )}
 
       {showSettings && (
         <FormSettingsDialog

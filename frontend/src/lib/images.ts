@@ -52,3 +52,16 @@ export async function deleteLibraryImage(id: string): Promise<void> {
 export function isLibraryUrl(v?: string | null): boolean {
   return !!v && v.startsWith("/rfi-api/images/");
 }
+
+const CATEGORY_ORDER = ["Official Logos", "Logos", "Backgrounds", "Banners", "Badges", "Icons"];
+
+export function sortCategories(cats: string[]): string[] {
+  return [...cats].sort((a, b) => {
+    const ia = CATEGORY_ORDER.indexOf(a);
+    const ib = CATEGORY_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}

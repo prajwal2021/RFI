@@ -170,3 +170,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   });
   if (!res.ok) throw new Error(await errorMessage(res, "Could not change password"));
 }
+
+export async function fetchUnassignedUsers(): Promise<OrgUser[]> {
+  return orgJson(await apiFetch(`${API}/orgs/unassigned`), "Failed to load users");
+}

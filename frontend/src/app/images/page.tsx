@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ImageIcon, ShieldAlert, Trash2, Upload } from "lucide-react";
 import AppHeader from "@/components/app-header";
 import { isAdmin } from "@/lib/auth";
-import { deleteLibraryImage, fetchImages, LibraryImage, uploadLibraryImage } from "@/lib/images";
+import { deleteLibraryImage, fetchImages, LibraryImage, sortCategories, uploadLibraryImage } from "@/lib/images";
 
-const CATEGORIES = ["Logos", "Backgrounds", "Icons"];
+const CATEGORIES = ["Official Logos", "Logos", "Backgrounds", "Banners", "Badges", "Icons"];
 
 export default function ImageLibraryPage() {
   const router = useRouter();
@@ -40,7 +40,8 @@ export default function ImageLibraryPage() {
   const grouped = useMemo(() => {
     const m = new Map<string, LibraryImage[]>();
     for (const i of images) (m.get(i.category) || m.set(i.category, []).get(i.category)!).push(i);
-    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    const order = sortCategories(Array.from(m.keys()));
+    return order.map((c) => [c, m.get(c)!] as [string, LibraryImage[]]);
   }, [images]);
 
   if (allowed === null) return null;

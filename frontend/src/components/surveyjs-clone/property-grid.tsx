@@ -9,6 +9,7 @@ import {
 import { parseAppearance, stringifyAppearance, Appearance } from "./appearance";
 import { FONTS } from "./theme";
 import ImageLibraryModal from "@/components/image-library-modal";
+import ImageEditorModal from "@/components/image-editor-modal";
 import { isLibraryUrl } from "@/lib/images";
 
 const inputCls =
@@ -165,6 +166,7 @@ export function ImageField({
   label: string; value?: string; onChange: (v: string) => void; category?: string;
 }) {
   const [showLib, setShowLib] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const upload = (file: File | undefined) => {
     if (!file) return;
     if (file.size > 750 * 1024) {
@@ -195,6 +197,11 @@ export function ImageField({
           <input type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
         </label>
         {value && (
+          <button type="button" onClick={() => setShowEdit(true)} className="text-xs font-semibold" style={{ color: "#19b394" }}>
+            Edit…
+          </button>
+        )}
+        {value && (
           <button onClick={() => onChange("")} className="text-xs text-gray-400 hover:text-red-500">
             Remove
           </button>
@@ -205,6 +212,7 @@ export function ImageField({
         <img src={value} alt="" className="mt-2 max-h-20 rounded border border-gray-200" />
       )}
       {showLib && <ImageLibraryModal initialCategory={category} onPick={onChange} onClose={() => setShowLib(false)} />}
+      {showEdit && value && <ImageEditorModal src={value} onApply={onChange} onClose={() => setShowEdit(false)} />}
     </Field>
   );
 }
@@ -419,7 +427,7 @@ export default function PropertyGrid({
           <Text label="Complete button text" value={getLoc(json.completeText)} onChange={loc(json, "completeText")} />
         </Section>
         <Section title="Logo">
-          <ImageField label="Logo" category="Logos" value={json.logo} onChange={(v) => onPatch({ logo: v || undefined })} />
+          <ImageField label="Logo" category="Official Logos" value={json.logo} onChange={(v) => onPatch({ logo: v || undefined })} />
           <Select
             label="Logo position"
             value={json.logoPosition || "left"}

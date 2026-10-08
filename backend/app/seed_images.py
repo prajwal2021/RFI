@@ -1,8 +1,12 @@
 """Built-in image library.
 
-These are original, generic artwork in Texas Tech scarlet and black. They are placeholders for the
-organisation's official brand assets, which administrators can upload on the Image library page.
+Contains the official Texas Tech logos (bundled files from ttu.edu and the TTU brand site), plus original generated
+artwork in scarlet and black: department wordmarks, backgrounds, icons, banners and badges. Administrators can add more
+on the Image library page.
 """
+import re
+from pathlib import Path
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,19 +16,48 @@ RED = "#cc0000"
 DARK_RED = "#8f0000"
 BLACK = "#1a1a1a"
 
-_MARK = (
-    '<rect width="54" height="54" rx="14" fill="{c}"/>'
-    '<path d="M12 16h30M27 16v24M16 40h22" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>'
-)
 _FONT = 'font-family="Arial,Helvetica,sans-serif"'
+
+# Official Texas Tech artwork lives in app/assets/official (downloaded from ttu.edu / the TTU brand site).
+_ASSETS = Path(__file__).parent / "assets" / "official"
+_DT_VIEWBOX = "263 345.7 85.9 100.7"  # viewBox of the official dbl__T.svg
+
+
+def _read_asset(name: str) -> bytes | None:
+    p = _ASSETS / name
+    return p.read_bytes() if p.exists() else None
+
+
+def _double_t_parts() -> tuple[str, str] | None:
+    """(full-colour inner markup, black silhouette path) taken from the official Double T."""
+    raw = _read_asset("dbl__T.svg")
+    if raw is None:
+        return None
+    text = raw.decode("utf-8", "ignore")
+    inner = re.search(r"<svg[^>]*>(.*)</svg>", text, re.S)
+    black = re.search(r'id="Black"\s+d="([^"]+)"', text, re.S)
+    if not inner or not black:
+        return None
+    return inner.group(1), black.group(1)
+
+
+def _double_t(colour_mode: str, x: float, y: float, w: float, h: float) -> str:
+    """Nested <svg> with the official Double T: 'full' colour, or a one-colour silhouette ('#rrggbb')."""
+    parts = _double_t_parts()
+    if parts is None:  # assets missing: fall back to a plain scarlet block so logos still render
+        return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="{RED}"/>'
+    inner, black = parts
+    body = inner if colour_mode == "full" else f'<path d="{black}" fill="{colour_mode}"/>'
+    return f'<svg x="{x}" y="{y}" width="{w}" height="{h}" viewBox="{_DT_VIEWBOX}">{body}</svg>'
 
 
 def _logo(title: str, sub: str, dark: bool = False, accent: str = RED) -> str:
     fg = "#ffffff" if dark else BLACK
     sub_fg = "#d4d4d4" if dark else "#555555"
+    mark = _double_t("#ffffff" if dark else "full", 8, 30, 52, 61)
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 120" width="560" height="120">'
-        f'<g transform="translate(8 33)">{_MARK.format(c=accent)}</g>'
+        f"{mark}"
         f'<text x="82" y="62" {_FONT} font-size="34" font-weight="700" fill="{fg}">{title}</text>'
         f'<text x="83" y="90" {_FONT} font-size="15" letter-spacing="3" fill="{sub_fg}">{sub}</text>'
         "</svg>"
@@ -211,17 +244,57 @@ SEEDS: list[tuple[str, str, str, str]] = [
 ]
 
 
+def _official() -> list[tuple[str, str, str, bytes, str]]:
+    """Official Texas Tech brand files (bundled in app/assets/official) plus one-colour Double T variants."""
+    cat = "Official Logos"
+    out: list[tuple[str, str, str, bytes, str]] = []
+    files = [
+        ("official-double-t", "Texas Tech Double T (official)", "double-t.svg", "image/svg+xml"),
+        ("official-wordmark", "Texas Tech wordmark (official)", "ttu-wordmark.png", "image/png"),
+        ("official-wordmark-stack", "Texas Tech stacked wordmark (official)", "ttu-wordmark-stack.png", "image/png"),
+        ("official-wordmark-wide", "Texas Tech University lettering (official, wide)", "ttu-wordmark-wide.svg", "image/svg+xml"),
+        ("official-k12", "TTU K-12 logo (official)", "ttu-k-12-logo.png", "image/png"),
+        ("official-k12-horizontal", "TTU K-12 horizontal logo (official)", "ttu-k-12-logo-horizontal.png", "image/png"),
+    ]
+    for key, name, filename, mime in files:
+        data = _read_asset(filename)
+        if data:
+            out.append((key, name, cat, data, mime))
+
+    parts = _double_t_parts()
+    if parts:
+        for suffix, label, colour in (("black", "black", "#000000"), ("scarlet", "scarlet", "#cc0000"), ("white", "white", "#ffffff")):
+            svg = (
+                f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{_DT_VIEWBOX}" width="343" height="402">'
+                f'<path d="{parts[1]}" fill="{colour}"/></svg>'
+            )
+            out.append(
+                (f"official-double-t-{suffix}", f"Double T, one colour: {label} (from official artwork)", cat, svg.encode("utf-8"), "image/svg+xml")
+            )
+    return out
+
+
 async def seed_images(db: AsyncSession) -> None:
-    """Insert any built-in image that is missing; never overwrites or removes existing rows."""
-    existing = set((await db.execute(select(ImageAsset.key).where(ImageAsset.key.is_not(None)))).scalars().all())
-    added = False
-    for key, name, category, svg in SEEDS:
-        if key in existing:
-            continue
-        data = svg.encode("utf-8")
-        db.add(
-            ImageAsset(key=key, name=name, category=category, mime="image/svg+xml", data=data, size=len(data), builtin=True)
-        )
-        added = True
-    if added:
+    """Create missing built-in images and refresh built-in ones whose artwork changed.
+
+    Rows uploaded by admins (builtin = false) are never modified or removed.
+    """
+    from app.seed_images_extra import EXTRA_SEEDS  # imported lazily: the extra module builds on helpers defined here
+
+    items: list[tuple[str, str, str, bytes, str]] = [
+        (key, name, category, svg.encode("utf-8"), "image/svg+xml") for key, name, category, svg in [*SEEDS, *EXTRA_SEEDS]
+    ] + _official()
+
+    rows = (await db.execute(select(ImageAsset).where(ImageAsset.key.is_not(None)))).scalars().all()
+    by_key = {r.key: r for r in rows}
+    changed = False
+    for key, name, category, data, mime in items:
+        row = by_key.get(key)
+        if row is None:
+            db.add(ImageAsset(key=key, name=name, category=category, mime=mime, data=data, size=len(data), builtin=True))
+            changed = True
+        elif row.builtin and (row.data != data or row.name != name or row.category != category or row.mime != mime):
+            row.data, row.size, row.name, row.category, row.mime = data, len(data), name, category, mime
+            changed = True
+    if changed:
         await db.commit()

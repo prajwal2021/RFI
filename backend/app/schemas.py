@@ -195,3 +195,7 @@ class WorkspaceOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RFIMove(BaseModel):
+    workspace_id: UUID | None = None

@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import AppHeader from "@/components/app-header";
 import FolderSidebar from "@/components/folder-sidebar";
 import RfiThumbnail from "@/components/rfi-thumbnail";
+import { startRfiDrag } from "@/lib/dnd";
 
 const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> = {
   draft: "draft",
@@ -119,7 +120,14 @@ export default function WorkspacePage() {
       />
 
       <div className="flex-1 flex min-h-0">
-        <FolderSidebar activeWorkspaceId={id} refreshKey={sidebarKey} />
+        <FolderSidebar
+          activeWorkspaceId={id}
+          refreshKey={sidebarKey}
+          onMoved={() => {
+            fetchWorkspaceRFIs(id).then(setRfis).catch(() => undefined);
+            fetchWorkspace(id).then(setWorkspace).catch(() => undefined);
+          }}
+        />
 
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-8">
           {rfis.length === 0 ? (
@@ -134,7 +142,12 @@ export default function WorkspacePage() {
               {rfis.map((rfi) => {
                 const editPath = getEditPath(rfi);
                 return (
-                  <div key={rfi.id} className="flex items-center gap-4 py-4 px-6">
+                  <div
+                    key={rfi.id}
+                    draggable
+                    onDragStart={(e) => startRfiDrag(e, rfi)}
+                    className="flex items-center gap-4 py-4 px-6 cursor-grab active:cursor-grabbing"
+                  >
                     <RfiThumbnail rfi={rfi} onClick={() => router.push(`/rfi/${rfi.id}`)} />
                     <div className="flex-1 min-w-0 mr-4">
                       <div className="flex items-center gap-3 mb-1">

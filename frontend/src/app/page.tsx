@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   RFI, Workspace, Me, fetchRFIs, fetchWorkspaces, fetchMe, deleteRFI, publishRFI,
-  createWorkspace, deleteWorkspace, getEditPath,
+  createWorkspace, deleteWorkspace, getEditPath, moveRFI,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import AppHeader from "@/components/app-header";
 import DashboardAnalytics from "@/components/dashboard-analytics";
 import FolderSidebar from "@/components/folder-sidebar";
+import { isRfiDrag, readRfiDrag, startRfiDrag } from "@/lib/dnd";
 import RfiThumbnail from "@/components/rfi-thumbnail";
 import ResponsesPanel from "@/components/responses-panel";
 
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const [newWsVisibility, setNewWsVisibility] = useState<"private" | "org">("private");
   const [wsError, setWsError] = useState<string | null>(null);
   const [sidebarKey, setSidebarKey] = useState(0);
+  const [dragOverWs, setDragOverWs] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -161,7 +163,7 @@ export default function DashboardPage() {
       />
 
       <div className="flex-1 flex min-h-0">
-        <FolderSidebar refreshKey={sidebarKey} />
+        <FolderSidebar refreshKey={sidebarKey} onMoved={() => loadData()} />
 
         <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-8">
           {/* ── Overview Tab ── */}
@@ -249,8 +251,28 @@ export default function DashboardPage() {
                 {workspaces.map((ws) => (
                   <Card
                     key={ws.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow group"
+                    className={`cursor-pointer hover:shadow-md transition-all group ${dragOverWs === ws.id ? "ring-2 ring-indigo-400 bg-indigo-50/60 scale-[1.02]" : ""}`}
                     onClick={() => router.push(`/workspace/${ws.id}`)}
+                    onDragOver={(e) => {
+                      if (!isRfiDrag(e)) return;
+                      e.preventDefault();
+                      setDragOverWs(ws.id);
+                    }}
+                    onDragLeave={() => setDragOverWs((cur) => (cur === ws.id ? null : cur))}
+                    onDrop={async (e) => {
+                      const dragged = readRfiDrag(e);
+                      setDragOverWs(null);
+                      if (!dragged) return;
+                      e.preventDefault();
+                      if (dragged.from === ws.id) return;
+                      try {
+                        await moveRFI(dragged.id, ws.id);
+                        await loadData();
+                        setSidebarKey((k) => k + 1);
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : "Could not move the form");
+                      }
+                    }}
                   >
                     <CardContent className="py-5 px-4">
                       <div className="flex items-start justify-between mb-3">
@@ -359,12 +381,21 @@ export default function DashboardPage() {
                       {filteredRFIs.map((rfi) => {
                         const editPath = getEditPath(rfi);
                         return (
-                          <div key={rfi.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                          <div
+                            key={rfi.id}
+                            draggable
+                            onDragStart={(e) => startRfiDrag(e, rfi)}
+                            className="flex items-center gap-4 py-4 first:pt-0 last:pb-0 cursor-grab active:cursor-grabbing"
+                          >
                             <RfiThumbnail rfi={rfi} onClick={() => router.push(`/rfi/${rfi.id}`)} />
                             <div className="flex-1 min-w-0 mr-4">
                               <div className="flex items-center gap-3 mb-1">
                                 <h4 className="font-medium text-foreground truncate">{rfi.subject}</h4>
                                 <Badge variant={STATUS_VARIANT[rfi.status]}>{rfi.status}</Badge>
+                                <Badge variant="draft" className="bg-slate-100 text-slate-600 text-xs max-w-[180px]">
+                                  <Folder className="h-3 w-3 mr-1 shrink-0" />
+                                  <span className="truncate">{workspaces.find((w) => w.id === rfi.workspace_id)?.name ?? (rfi.workspace_id ? "Workspace" : "Unfiled")}</span>
+                                </Badge>
                                 {rfi.content?.formDefinition && (
                                   <Badge variant="draft" className="bg-indigo-100 text-indigo-700 text-xs">SS Form</Badge>
                                 )}
