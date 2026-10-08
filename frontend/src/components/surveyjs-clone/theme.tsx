@@ -67,6 +67,17 @@ function contrast(hex: string): string {
   return lum > 0.6 ? "#000000" : "#ffffff";
 }
 
+/** Baseline rules so author-written HTML blocks look right inside SurveyJS (its CSS resets lists and headings). */
+const BASE_CSS = `
+.sjs-themed .sd-html ul { list-style: disc; padding-left: 1.4em; margin: .5em 0; }
+.sjs-themed .sd-html ol { list-style: decimal; padding-left: 1.4em; margin: .5em 0; }
+.sjs-themed .sd-html li { margin: .2em 0; }
+.sjs-themed .sd-html h1, .sjs-themed .sd-html h2, .sjs-themed .sd-html h3 { font-weight: 600; line-height: 1.25; margin: .3em 0 .4em; }
+.sjs-themed .sd-html h1 { font-size: 1.6em; } .sjs-themed .sd-html h2 { font-size: 1.35em; } .sjs-themed .sd-html h3 { font-size: 1.15em; }
+.sjs-themed .sd-html a { color: var(--sjs-primary-backcolor, #19b394); text-decoration: underline; }
+.sjs-themed .sd-html p { margin: .5em 0; }
+`;
+
 export function themeCss(t?: SurveyTheme): string {
   if (!t) return "";
   const v: string[] = [];
@@ -103,7 +114,7 @@ export function themeCss(t?: SurveyTheme): string {
   if (typeof t.cornerRadius === "number") v.push(`--sjs-corner-radius:${t.cornerRadius}px`);
 
   let css = `.sjs-themed, .sjs-themed .sd-root-modern { ${v.join(";")} }`;
-  if (t.fontFamily) css += `.sjs-themed, .sjs-themed [class*="sd-"] { font-family: ${t.fontFamily}; }`;
+  if (t.fontFamily) css += `.sjs-themed, .sjs-themed [class*="sd-"], .sjs-themed .sd-html * { font-family: ${t.fontFamily}; }`;
   if (t.backgroundImage) css += `.sjs-themed .sd-root-modern { background-color: transparent; }`;
   if (t.text && rgb(t.text)) css += `.sjs-themed { color: ${t.text}; }`;
   if (t.headingColor && rgb(t.headingColor)) {
@@ -133,7 +144,7 @@ export function Themed({
   }
   return (
     <div className={`sjs-themed ${className}`} style={style}>
-      <style dangerouslySetInnerHTML={{ __html: themeCss(theme) }} />
+      <style dangerouslySetInnerHTML={{ __html: BASE_CSS + themeCss(theme) }} />
       {children}
     </div>
   );

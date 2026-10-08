@@ -114,15 +114,17 @@ export default function ViewRFIPage() {
       {/* Top Bar */}
       <header className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-semibold">{rfi.subject}</h1>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="shrink-0" onClick={() => router.push("/")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-lg font-semibold truncate min-w-0" title={rfi.subject}>
+                  {rfi.subject}
+                </h1>
+                <div className="flex items-center gap-1.5 shrink-0">
                   <Badge variant={STATUS_VARIANT[rfi.status]}>{rfi.status}</Badge>
                   {rfi.is_published && (
                     <Badge variant="open" className="bg-green-100 text-green-700">
@@ -130,92 +132,77 @@ export default function ViewRFIPage() {
                       Published
                     </Badge>
                   )}
-                  <Badge variant="draft" className="bg-slate-100 text-slate-600">
-                    <Folder className="h-3 w-3 mr-1" />
-                    {rfi.workspace_id ? wsName ?? "Workspace" : "Unfiled"}
+                  <Badge variant="draft" className="bg-slate-100 text-slate-600 max-w-[200px]">
+                    <Folder className="h-3 w-3 mr-1 shrink-0" />
+                    <span className="truncate">{rfi.workspace_id ? wsName ?? "Workspace" : "Unfiled"}</span>
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Created by {rfi.created_by} on{" "}
-                  {format(new Date(rfi.created_at), "MMM d, yyyy 'at' h:mm a")}
-                </p>
+              </div>
+              <p className="text-sm text-muted-foreground truncate">
+                Created by {rfi.created_by} on {format(new Date(rfi.created_at), "MMM d, yyyy 'at' h:mm a")}
                 {(rfi.opens_at || rfi.closes_at || rfi.max_responses) && (
-                  <p className="text-xs text-indigo-600 mt-0.5">
+                  <span className="text-indigo-600">
+                    {" · "}
                     {rfi.opens_at && `Opens ${format(new Date(rfi.opens_at), "MMM d, h:mm a")}`}
                     {rfi.opens_at && (rfi.closes_at || rfi.max_responses) && " · "}
                     {rfi.closes_at && `Closes ${format(new Date(rfi.closes_at), "MMM d, h:mm a")}`}
                     {rfi.closes_at && rfi.max_responses && " · "}
                     {rfi.max_responses && `Limit ${submissionCount}/${rfi.max_responses} responses`}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {rfi.is_published ? (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleCopyUrl}>
-                    <Copy className="h-4 w-4 mr-1" />
-                    {copied ? "Copied!" : "Copy Link"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => publicUrl && window.open(publicUrl, "_blank")}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    Open
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleUnpublish} disabled={publishing}>
-                    <GlobeLock className="h-4 w-4 mr-1" />
-                    Unpublish
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handlePublish}
-                  disabled={publishing || !rfi.content}
-                >
-                  <Globe className="h-4 w-4 mr-1" />
-                  {publishing ? "Publishing..." : "Publish"}
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={openSubmissions}
-              >
-                <FileText className="h-4 w-4 mr-1" />
-                Responses
-                {submissionCount > 0 && (
-                  <span className="ml-1 rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-semibold">
-                    {submissionCount}
                   </span>
                 )}
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowMove(true)}>
-                <FolderInput className="h-4 w-4 mr-1" />
-                Move
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-                <Settings2 className="h-4 w-4 mr-1" />
-                Settings
-              </Button>
-              {getEditPath(rfi) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(getEditPath(rfi) as string)}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              )}
-              <div className="ml-2">
-                <ProfileMenu />
-              </div>
+              </p>
             </div>
+            <div className="shrink-0">
+              <ProfileMenu />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {rfi.is_published ? (
+              <>
+                <Button variant="outline" size="sm" onClick={handleCopyUrl}>
+                  <Copy className="h-4 w-4 mr-1" />
+                  {copied ? "Copied!" : "Copy Link"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => publicUrl && window.open(publicUrl, "_blank")}>
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Open
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleUnpublish} disabled={publishing}>
+                  <GlobeLock className="h-4 w-4 mr-1" />
+                  Unpublish
+                </Button>
+              </>
+            ) : (
+              <Button variant="default" size="sm" onClick={handlePublish} disabled={publishing || !rfi.content}>
+                <Globe className="h-4 w-4 mr-1" />
+                {publishing ? "Publishing..." : "Publish"}
+              </Button>
+            )}
+            <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1" />
+            <Button variant="outline" size="sm" onClick={openSubmissions}>
+              <FileText className="h-4 w-4 mr-1" />
+              Responses
+              {submissionCount > 0 && (
+                <span className="ml-1 rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-semibold">
+                  {submissionCount}
+                </span>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowMove(true)}>
+              <FolderInput className="h-4 w-4 mr-1" />
+              Move
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+              <Settings2 className="h-4 w-4 mr-1" />
+              Settings
+            </Button>
+            {getEditPath(rfi) && (
+              <Button variant="outline" size="sm" onClick={() => router.push(getEditPath(rfi) as string)}>
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            )}
           </div>
         </div>
       </header>
