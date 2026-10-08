@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  ArrowLeft, Eye, Pencil, Trash2, FileText, Globe, Copy, ClipboardList, ListChecks, Lock, Building2,
+  ArrowLeft, Eye, Pencil, Trash2, FileText, Globe, Copy, Plus, Lock, Building2,
 } from "lucide-react";
 import { format } from "date-fns";
 import AppHeader from "@/components/app-header";
@@ -80,23 +80,8 @@ export default function WorkspacePage() {
     const size = large ? undefined : ("sm" as const);
     return (
       <>
-        <Button size={size} onClick={() => router.push(`/forms/new?workspace=${id}`)}>
-          <ClipboardList className="h-4 w-4 mr-1" /> SS Form
-        </Button>
-        <Button
-          size={size}
-          className="bg-[#19b394] hover:bg-[#139a7e] text-white"
-          onClick={() => router.push(`/surveyjs/new?workspace=${id}`)}
-        >
-          <ListChecks className="h-4 w-4 mr-1" /> SurveyJS
-        </Button>
-        <Button
-          variant="outline"
-          size={size}
-          className="border-[#19b394] text-[#19b394] hover:bg-emerald-50"
-          onClick={() => router.push(`/surveyjs-clone/new?workspace=${id}`)}
-        >
-          <ListChecks className="h-4 w-4 mr-1" /> SurveyJS Clone
+        <Button size={size} onClick={() => router.push(`/surveyjs-clone/new?workspace=${id}`)}>
+          <Plus className="h-4 w-4 mr-1" /> New form
         </Button>
       </>
     );

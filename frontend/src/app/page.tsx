@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Eye, Pencil, Trash2, Search, Globe, Copy, FolderPlus, Folder, ClipboardList, X, ListChecks, Lock, Building2, Inbox,
+  Eye, Pencil, Trash2, Search, Globe, Copy, FolderPlus, Folder, Plus, X, Lock, Building2, Inbox,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -349,21 +349,8 @@ export default function DashboardPage() {
                       <h3 className="text-lg font-medium text-foreground mb-1">No RFIs found</h3>
                       <p className="text-muted-foreground mb-4">Get started by creating your first form</p>
                       <div className="flex items-center justify-center gap-3">
-                        <Button onClick={() => router.push("/forms/new")}>
-                          <ClipboardList className="h-4 w-4 mr-2" /> SS Form
-                        </Button>
-                        <Button
-                          className="bg-[#19b394] hover:bg-[#139a7e] text-white"
-                          onClick={() => router.push("/surveyjs/new")}
-                        >
-                          <ListChecks className="h-4 w-4 mr-2" /> SurveyJS
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="border-[#19b394] text-[#19b394] hover:bg-emerald-50"
-                          onClick={() => router.push("/surveyjs-clone/new")}
-                        >
-                          <ListChecks className="h-4 w-4 mr-2" /> SurveyJS Clone
+                        <Button onClick={() => router.push("/surveyjs-clone/new")}>
+                          <Plus className="h-4 w-4 mr-2" /> New form
                         </Button>
                       </div>
                     </div>
