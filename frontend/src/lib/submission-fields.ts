@@ -125,7 +125,7 @@ export function buildRows(fields: FieldInfo[], data: Record<string, any>): Field
 // Fields typed as phone inputs win; the label is only a fallback for forms that do not type the field.
 const PHONE_LABEL_RE = /\b(tele)?phone\b|\bmobile\b|\bcell(ular)?\b/i;
 const SMS_OPT_RE =
-  /\bsms\b|\btexts?\b[\s_-]*(messag|alert|updat|notif|remind)|\btexting\b|\btext\s+me\b|\breceive\b.{0,40}\btext|\bopt[\s_-]*in\b.{0,40}\btexts?\b/i;
+  /\bsms\b|\btexts?\b[\s_-]*(messag|alert|updat|notif|remind)|\btexting\b|\btext\s+me\b|\breceive\b.{0,40}\btext|\bopt[\s_-]*in\b.{0,40}\btexts?\b|\b(agree|accept|consent|opt)\b.{0,30}\bmessag(e|es|ing)\b/i;
 const NEGATIVE_RE = /^(no|n|false|0|off|unchecked|declined?|opt[\s_-]*out|not?\s+opted)\b/i;
 
 const CHOICE_TYPES = ["boolean", "checkbox", "radiogroup", "radio"];
