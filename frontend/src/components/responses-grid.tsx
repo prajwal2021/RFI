@@ -8,6 +8,7 @@ import {
 import { detectSms, FieldInfo } from "@/lib/submission-fields";
 import type { Assignee, StatusOption, Submission, SubmissionWithRFI } from "@/lib/api";
 import ResponseTracker, { StatusPill, STATUS_STYLE as STATUS_PILL } from "@/components/response-tracker";
+import ResponseContactCard from "@/components/crm/response-contact-card";
 
 const PAGE_SIZE = 50;
 const SUBMITTED_W = 160;
@@ -362,6 +363,7 @@ export default function ResponsesGrid({
                 {sel.submitted_by_name && sel.submitted_by_email && <div className="text-xs text-slate-500">{sel.submitted_by_email}</div>}
               </div>
             )}
+            <ResponseContactCard submissionId={sel.id} contactId={sel.contact_id} rfiId={sel.rfi_id} />
             <div className="pb-3 border-b border-slate-200">
               <ResponseTracker sub={sel} statuses={statuses} assignees={assignees} onUpdate={onUpdate} />
             </div>

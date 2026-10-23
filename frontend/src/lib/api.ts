@@ -41,6 +41,7 @@ export interface Submission {
   owner_id: string | null;
   owner_email: string | null;
   follow_up_at: string | null;
+  contact_id: string | null;
 }
 
 export interface PublicRFI {
@@ -177,8 +178,15 @@ export async function fetchSubmissions(rfiId: string): Promise<Submission[]> {
   return res.json();
 }
 
+/** Personal Call Center links carry ?i=<token>; passing it on lets the app record opens and match the response to the person. */
+function inviteToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("i");
+}
+
 export async function fetchPublicRFI(publishKey: string): Promise<PublicRFI> {
-  const res = await fetch(`${API_BASE}/rfis/public/${publishKey}`);
+  const tok = inviteToken();
+  const res = await fetch(`${API_BASE}/rfis/public/${publishKey}${tok ? `?i=${encodeURIComponent(tok)}` : ""}`);
   if (!res.ok) throw new Error("RFI not found or not published");
   return res.json();
 }
@@ -190,7 +198,7 @@ export async function submitPublicRFI(
   const res = await fetch(`${API_BASE}/rfis/public/${publishKey}/submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, invite: inviteToken() }),
   });
   if (!res.ok) {
     let detail = "Failed to submit response";

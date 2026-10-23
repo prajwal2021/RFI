@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, Headset } from "lucide-react";
 import ProfileMenu from "@/components/profile-menu";
 import NewFormMenu from "@/components/new-form-menu";
 
@@ -44,6 +44,9 @@ export default function AppHeader({
           {left}
         </div>
         <div className="flex items-center gap-3">
+          <a href="/rfi/crm" className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100" title="Open the Call Center">
+            <Headset className="h-4 w-4" /> Call Center
+          </a>
           <NewFormMenu workspaceId={workspaceId} />
           <ProfileMenu />
         </div>
