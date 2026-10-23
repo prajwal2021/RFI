@@ -7,7 +7,9 @@ from sqlalchemy import text
 from app.auth import seed_admin
 from app.config import settings
 from app.database import engine, Base, async_session
-from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups, images
+from app import crm_models  # noqa: F401  (registers Call Center tables before create_all)
+from app.crm_logic import link_unlinked_submissions, seed_courses
+from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups, images, crm
 from app.seed_images import seed_images
 
 
@@ -23,6 +25,9 @@ MIGRATIONS = [
     "ALTER TABLE rfi_submissions ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'new'",
     "ALTER TABLE rfi_submissions ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL",
     "ALTER TABLE rfi_submissions ADD COLUMN IF NOT EXISTS follow_up_at TIMESTAMPTZ",
+    "ALTER TABLE rfi_submissions ADD COLUMN IF NOT EXISTS contact_id UUID REFERENCES crm_contacts(id) ON DELETE SET NULL",
+    "CREATE INDEX IF NOT EXISTS ix_rfi_submissions_contact_id ON rfi_submissions (contact_id)",
+    "CREATE SEQUENCE IF NOT EXISTS crm_work_item_seq START 1001",
 ]
 
 
@@ -38,6 +43,10 @@ async def lifespan(app: FastAPI):
     async with async_session() as db:
         await seed_admin(db)
         await seed_images(db)
+        await seed_courses(db)
+        linked = await link_unlinked_submissions(db)
+        if linked:
+            print(f"Call Center: linked {linked} existing RFI responses to contacts")
     yield
 
 
@@ -62,6 +71,7 @@ app.include_router(analytics.router)
 app.include_router(admin_audit.router)
 app.include_router(admin_backups.router)
 app.include_router(images.router)
+app.include_router(crm.router)
 app.include_router(rfis.router)
 app.include_router(workspaces.router)
 app.include_router(submissions.router)

@@ -26,7 +26,7 @@ def _with_rfi(s: RFISubmission, subject: str) -> SubmissionWithRFI:
     return SubmissionWithRFI(
         id=s.id, rfi_id=s.rfi_id, rfi_subject=subject, data=s.data,
         submitted_by_name=s.submitted_by_name, submitted_by_email=s.submitted_by_email, created_at=s.created_at,
-        status=s.status, owner_id=s.owner_id, owner_email=s.owner_email, follow_up_at=s.follow_up_at,
+        status=s.status, owner_id=s.owner_id, owner_email=s.owner_email, follow_up_at=s.follow_up_at, contact_id=s.contact_id,
     )
 
 

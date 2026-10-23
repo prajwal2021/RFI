@@ -95,6 +95,7 @@ class RFISubmission(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="new", server_default="new")
     owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     follow_up_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    contact_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("crm_contacts.id", ondelete="SET NULL"), nullable=True, index=True)
 
     rfi: Mapped["RFI"] = relationship(back_populates="submissions")
     owner: Mapped["User | None"] = relationship(lazy="joined", foreign_keys=[owner_id])

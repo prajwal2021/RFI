@@ -95,6 +95,7 @@ class SubmissionCreate(BaseModel):
     data: dict[str, Any]
     submitted_by_name: str | None = None
     submitted_by_email: str | None = None
+    invite: str | None = None
 
 
 class SubmissionOut(BaseModel):
@@ -108,6 +109,7 @@ class SubmissionOut(BaseModel):
     owner_id: UUID | None = None
     owner_email: str | None = None
     follow_up_at: datetime | None = None
+    contact_id: UUID | None = None
 
     model_config = {"from_attributes": True}
 
@@ -124,6 +126,7 @@ class SubmissionWithRFI(BaseModel):
     owner_id: UUID | None = None
     owner_email: str | None = None
     follow_up_at: datetime | None = None
+    contact_id: UUID | None = None
 
 
 class LoginIn(BaseModel):

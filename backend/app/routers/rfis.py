@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import record
+from app.crm_logic import link_submission
+from app.crm_models import RFIInvitation
 from app.access import get_accessible_rfi, get_accessible_workspace, rfi_visible_clause
 from app.auth import require_user
 from app.database import get_db
@@ -42,13 +44,19 @@ async def _response_count(db: AsyncSession, rfi_id: UUID) -> int:
 
 
 @router.get("/public/{publish_key}", response_model=RFIPublicOut)
-async def get_public_rfi(publish_key: str, db: AsyncSession = Depends(get_db)):
+async def get_public_rfi(publish_key: str, i: str | None = None, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(RFI).where(RFI.publish_key == publish_key, RFI.is_published.is_(True))
     )
     rfi = result.scalar_one_or_none()
     if not rfi:
         raise HTTPException(status_code=404, detail="RFI not found or not published")
+    if i:  # personal link from the Call Center: record that this person opened the form
+        inv = (await db.execute(select(RFIInvitation).where(RFIInvitation.token == i, RFIInvitation.rfi_id == rfi.id))).scalar_one_or_none()
+        if inv and not inv.submitted_at:
+            inv.open_count = (inv.open_count or 0) + 1
+            inv.opened_at = inv.opened_at or datetime.now(timezone.utc)
+            await db.commit()
     count = await _response_count(db, rfi.id) if rfi.max_responses is not None else 0
     accepting, reason = availability(rfi, count)
     return RFIPublicOut(
@@ -88,6 +96,11 @@ async def submit_public_rfi(
     db.add(submission)
     await db.flush()
     db.add(SubmissionEvent(submission_id=submission.id, actor_email=submission_in.submitted_by_email, kind="submitted"))
+    try:
+        async with db.begin_nested():  # linking to a person must never lose the response itself
+            await link_submission(db, submission, rfi, submission_in.invite)
+    except Exception as e:
+        print(f"crm link failed for submission {submission.id}: {e}")
 
     if rfi.status == RFIStatus.DRAFT or rfi.status == RFIStatus.OPEN:
         rfi.status = RFIStatus.ANSWERED
