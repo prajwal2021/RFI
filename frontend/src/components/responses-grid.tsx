@@ -304,7 +304,6 @@ export default function ResponsesGrid({
                         <div className="truncate max-w-[200px]">{s.submitted_by_name || s.submitted_by_email || "—"}</div>
                       </td>
                     )}
-                    {visible.map((c) => (
                     <td className={`${cell} ${bg}`}><StatusPill status={s.status} statuses={statuses} /></td>
                     <td className={`${cell} ${bg}`}><div className="truncate max-w-[160px] text-slate-600">{s.owner_email || <span className="text-slate-300">Unassigned</span>}</div></td>
                     <td className={`${cell} ${bg} whitespace-nowrap`}>
@@ -316,6 +315,7 @@ export default function ResponsesGrid({
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
+                    {visible.map((c) => (
                       <td key={c.key} className={`${cell} ${bg}`} style={{ maxWidth: w(c.key) }} title={plain(c.get(s))}>
                         <div className="overflow-hidden max-h-[3.2rem]"><Cell v={c.get(s)} /></div>
                       </td>
