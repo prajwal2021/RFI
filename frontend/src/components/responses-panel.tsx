@@ -3,18 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, RefreshCw, Search, Inbox, ExternalLink, MessageSquare } from "lucide-react";
+import { RefreshCw, Search, Inbox, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchAllSubmissions, fetchRFIs, RFI, SubmissionWithRFI } from "@/lib/api";
-import { buildRows, detectSms, fieldsForContent, FieldInfo } from "@/lib/submission-fields";
+import { fieldsForContent, FieldInfo } from "@/lib/submission-fields";
+import ResponsesGrid from "@/components/responses-grid";
 import { buildExportTable } from "@/lib/export";
 import ExportMenu from "@/components/export-menu";
 import DateRangePicker from "@/components/date-range-picker";
 
-const PAGE = 25;
 
 function kindOf(rfi?: RFI): { label: string; cls: string } | null {
   if (!rfi?.content) return null;
@@ -51,8 +51,6 @@ export default function ResponsesPanel({
   const [error, setError] = useState<string | null>(null);
   const [formFilter, setFormFilter] = useState(initialForm);
   const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [shown, setShown] = useState(PAGE);
 
   const load = async () => {
     setLoading(true);
@@ -122,13 +120,17 @@ export default function ResponsesPanel({
     });
   }, [subs, formFilter, dateFilter, search]);
 
-  const toggle = (id: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const overview = useMemo(() => {
+    const map = new Map<string, { id: string; subject: string; count: number; latest: string }>();
+    for (const s of filtered) {
+      const cur = map.get(s.rfi_id);
+      if (cur) {
+        cur.count++;
+        if (s.created_at > cur.latest) cur.latest = s.created_at;
+      } else map.set(s.rfi_id, { id: s.rfi_id, subject: s.rfi_subject, count: 1, latest: s.created_at });
+    }
+    return Array.from(map.values()).sort((a, b) => b.latest.localeCompare(a.latest));
+  }, [filtered]);
 
   return (
     <div>
@@ -142,16 +144,19 @@ export default function ResponsesPanel({
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setShown(PAGE);
                 }}
                 className="pl-9"
               />
             </div>
+            {formFilter && (
+              <Button variant="outline" size="sm" onClick={() => setFormFilter("")}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> All forms
+              </Button>
+            )}
             <select
               value={formFilter}
               onChange={(e) => {
                 setFormFilter(e.target.value);
-                setShown(PAGE);
               }}
               className="h-10 rounded-md border border-input bg-background px-3 text-sm w-full md:w-72"
             >
@@ -166,7 +171,6 @@ export default function ResponsesPanel({
               value={dateFilter}
               onChange={(r) => {
                 setDateFilter(r);
-                setShown(PAGE);
               }}
               counts={dayCounts}
             />
@@ -191,119 +195,63 @@ export default function ResponsesPanel({
         </Card>
       ) : loading && subs.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">Loading responses…</div>
+      ) : !formFilter ? (
+        <Card className="overflow-hidden">
+          <div className="px-5 py-3 border-b bg-slate-50 text-sm text-slate-600">
+            Choose a form to see its responses as a sheet.
+          </div>
+          {overview.length === 0 ? (
+            <CardContent className="py-16 text-center">
+              <Inbox className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-foreground mb-1">No responses found</h3>
+              <p className="text-sm text-muted-foreground">
+                {subs.length > 0 ? "No responses match your filters." : "Responses to your published forms will appear here."}
+              </p>
+            </CardContent>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-slate-400 border-b">
+                  <th className="px-5 py-2.5 font-medium">Form</th>
+                  <th className="px-5 py-2.5 font-medium">Responses</th>
+                  <th className="px-5 py-2.5 font-medium">Latest</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overview.map((f) => {
+                  const kind = kindOf(rfiById.get(f.id));
+                  return (
+                    <tr key={f.id} onClick={() => setFormFilter(f.id)} className="border-b last:border-0 cursor-pointer hover:bg-slate-50">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">{f.subject}</span>
+                          {kind && <Badge variant="draft" className={`${kind.cls} text-xs`}>{kind.label}</Badge>}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 tabular-nums">{f.count}</td>
+                      <td className="px-5 py-3 text-slate-500">{format(new Date(f.latest), "MMM d, yyyy h:mm a")}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </Card>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <Inbox className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-foreground mb-1">No responses yet</h3>
-            <p className="text-sm text-muted-foreground">
-              {subs.length > 0 ? "No responses match your filters." : "Responses to your published forms will appear here."}
-            </p>
+            <h3 className="text-lg font-medium text-foreground mb-1">No responses</h3>
+            <p className="text-sm text-muted-foreground">No responses match your filters for this form.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filtered.slice(0, shown).map((s) => {
-            const isOpen = expanded.has(s.id);
-            const kind = kindOf(rfiById.get(s.rfi_id));
-            return (
-              <Card key={s.id} className="overflow-hidden">
-                <button
-                  onClick={() => toggle(s.id)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-gray-50"
-                >
-                  {isOpen ? (
-                    <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900 truncate">{s.rfi_subject}</span>
-                      {kind && (
-                        <Badge variant="draft" className={`${kind.cls} text-xs`}>
-                          {kind.label}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {s.submitted_by_name || s.submitted_by_email || "Anonymous"}
-                      {s.submitted_by_name && s.submitted_by_email ? ` · ${s.submitted_by_email}` : ""}
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-400 shrink-0">
-                    {format(new Date(s.created_at), "MMM d, yyyy 'at' h:mm a")}
-                  </span>
-                </button>
-                {isOpen && (
-                  <div className="border-t px-5 py-3 bg-gray-50/50">
-                    <table className="w-full text-sm">
-                      <tbody>
-                        {buildRows(fieldsFor(s.rfi_id), s.data).map((row, i) => (
-                          <tr key={i} className="border-b border-gray-100 last:border-0">
-                            <td className="py-2.5 pr-6 font-medium text-gray-600 align-top w-1/3">{row.label}</td>
-                            <td className="py-2.5 text-gray-900 whitespace-pre-wrap break-words">
-                              {row.value.startsWith("data:image") ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={row.value} alt="" className="max-h-28 rounded border border-gray-200 bg-white" />
-                              ) : (
-                                row.value
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {(() => {
-                      const sms = detectSms(fieldsFor(s.rfi_id), s.data);
-                      return (
-                        <div className="pt-3 flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex flex-wrap items-center gap-3">
-                            {sms.hasPhoneField && (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={!sms.canSend}
-                                  title={sms.reason ?? `Send an SMS to ${sms.phone}`}
-                                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground shadow-sm hover:opacity-90 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
-                                >
-                                  <MessageSquare className="h-4 w-4" /> Send SMS
-                                </button>
-                                {sms.phone && <span className="text-sm text-slate-600 tabular-nums">{sms.phone}</span>}
-                                <span
-                                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                                    sms.optedIn && sms.hasOptInField
-                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                      : "border-slate-200 bg-slate-50 text-slate-500"
-                                  }`}
-                                >
-                                  {!sms.hasOptInField ? "No SMS opt-in question" : sms.optedIn ? "Agreed to SMS" : "Did not agree to SMS"}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => router.push(`/rfi/${s.rfi_id}`)}
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            Open form <ExternalLink className="h-3 w-3" />
-                          </button>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-          {filtered.length > shown && (
-            <div className="text-center pt-2">
-              <Button variant="outline" onClick={() => setShown(shown + PAGE)}>
-                Show more ({filtered.length - shown} remaining)
-              </Button>
-            </div>
-          )}
-        </div>
+        <ResponsesGrid
+          rows={filtered}
+          fields={fieldsFor(formFilter)}
+          formId={formFilter}
+          onOpenForm={() => router.push(`/rfi/${formFilter}`)}
+        />
       )}
     </div>
   );
