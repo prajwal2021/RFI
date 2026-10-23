@@ -16,7 +16,7 @@ import { formatValue } from "@/lib/submission-fields";
 import { btn, Card, Empty, ErrorBox, FieldLabel, HelpTip, input, JourneyBadge, Modal, OptSelect, Path, textarea, Toast, useMeta } from "@/components/crm/ui";
 import { SendRfiDialog, WorkDrawer, WorkItemDialog, WorkPreset, WorkRow, WorkTableHead } from "@/components/crm/dialogs";
 
-const CHANNEL_ICON: Record<string, React.ReactNode> = {
+const CHANNEL_ICON: Record<string, JSX.Element> = {
   call: <PhoneCall className="h-3.5 w-3.5" />, voicemail: <Phone className="h-3.5 w-3.5" />, email: <Mail className="h-3.5 w-3.5" />,
   sms: <MessageSquare className="h-3.5 w-3.5" />, note: <StickyNote className="h-3.5 w-3.5" />,
 };
