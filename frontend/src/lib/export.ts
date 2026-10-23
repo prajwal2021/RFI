@@ -8,6 +8,9 @@ export interface ExportSubmission {
   submitted_by_name: string | null;
   submitted_by_email: string | null;
   created_at: string;
+  status?: string;
+  owner_email?: string | null;
+  follow_up_at?: string | null;
 }
 
 // ── Table building ──
@@ -23,7 +26,7 @@ export function buildExportTable(
   fieldsFor: (rfiId: string) => FieldInfo[],
   fallbackSubject = ""
 ): string[][] {
-  const fixed = ["Form", "Submitted at", "Respondent name", "Respondent email"];
+  const fixed = ["Form", "Submitted at", "Respondent name", "Respondent email", "Status", "Owner", "Follow-up"];
   const labelIndex = new Map<string, number>();
   const records: { fixed: string[]; values: Map<number, string> }[] = [];
 
@@ -43,6 +46,9 @@ export function buildExportTable(
         format(new Date(s.created_at), "yyyy-MM-dd HH:mm:ss"),
         s.submitted_by_name || "",
         s.submitted_by_email || "",
+        (s.status || "new").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()),
+        s.owner_email || "",
+        s.follow_up_at ? format(new Date(s.follow_up_at), "yyyy-MM-dd") : "",
       ],
       values,
     });

@@ -37,6 +37,10 @@ export interface Submission {
   submitted_by_name: string | null;
   submitted_by_email: string | null;
   created_at: string;
+  status: string;
+  owner_id: string | null;
+  owner_email: string | null;
+  follow_up_at: string | null;
 }
 
 export interface PublicRFI {
@@ -305,4 +309,75 @@ export async function moveRFI(id: string, workspaceId: string | null): Promise<R
     throw new Error(detail);
   }
   return res.json();
+}
+
+// ── Response tracking (status, owner, follow-up, notes, timeline) ──
+
+export interface StatusOption {
+  value: string;
+  label: string;
+}
+
+export interface Assignee {
+  id: string;
+  email: string;
+}
+
+export interface SubmissionEvent {
+  id: string;
+  created_at: string;
+  actor_email: string | null;
+  kind: "submitted" | "status" | "owner" | "follow_up" | "note";
+  data: Record<string, any> | null;
+}
+
+async function trackJson<T>(res: Response, fallback: string): Promise<T> {
+  if (!res.ok) {
+    let detail = fallback;
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // keep default
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+export async function fetchStatuses(): Promise<StatusOption[]> {
+  return trackJson(await apiFetch(`${API_BASE}/submissions/statuses`), "Failed to load statuses");
+}
+
+export async function fetchAssignees(): Promise<Assignee[]> {
+  return trackJson(await apiFetch(`${API_BASE}/submissions/assignees`), "Failed to load people");
+}
+
+export async function updateSubmission(
+  id: string,
+  patch: { status?: string; owner_id?: string; clear_owner?: boolean; follow_up_at?: string; clear_follow_up?: boolean }
+): Promise<Submission> {
+  return trackJson(
+    await apiFetch(`${API_BASE}/submissions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+    "Could not update the response"
+  );
+}
+
+export async function addSubmissionNote(id: string, text: string): Promise<void> {
+  await trackJson(
+    await apiFetch(`${API_BASE}/submissions/${id}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    }),
+    "Could not add the note"
+  );
+}
+
+export async function fetchSubmissionEvents(id: string): Promise<SubmissionEvent[]> {
+  return trackJson(await apiFetch(`${API_BASE}/submissions/${id}/events`), "Failed to load the timeline");
 }

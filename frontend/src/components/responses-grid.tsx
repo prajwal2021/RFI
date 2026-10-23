@@ -6,7 +6,8 @@ import {
   ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Columns3, ExternalLink, MessageSquare, X,
 } from "lucide-react";
 import { detectSms, FieldInfo } from "@/lib/submission-fields";
-import type { SubmissionWithRFI } from "@/lib/api";
+import type { Assignee, StatusOption, Submission, SubmissionWithRFI } from "@/lib/api";
+import ResponseTracker, { StatusPill, STATUS_STYLE as STATUS_PILL } from "@/components/response-tracker";
 
 const PAGE_SIZE = 50;
 const SUBMITTED_W = 160;
@@ -71,13 +72,20 @@ export default function ResponsesGrid({
   rows,
   fields,
   formId,
+  statuses,
+  assignees,
+  onUpdate,
   onOpenForm,
 }: {
   rows: SubmissionWithRFI[];
   fields: FieldInfo[];
   formId: string;
+  statuses: StatusOption[];
+  assignees: Assignee[];
+  onUpdate: (s: Submission) => void;
   onOpenForm: () => void;
 }) {
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const columns: Col[] = useMemo(() => {
     const cols: Col[] = fields.map((f) => ({ key: `f:${f.name}`, label: f.label, get: (s) => pick(s, f) }));
     const known = new Set(fields.flatMap((f) => [f.name, f.label]));
@@ -100,11 +108,12 @@ export default function ResponsesGrid({
     setHidden(new Set());
     setPage(0);
     setSelected(null);
+    setStatusFilter(null);
   }, [formId]);
 
   useEffect(() => {
     setPage(0);
-  }, [rows.length]);
+  }, [rows.length, statusFilter]);
 
   useEffect(() => {
     if (!showCols) return;
@@ -118,28 +127,39 @@ export default function ResponsesGrid({
   const visible = columns.filter((c) => !hidden.has(c.key));
   const w = (key: string) => widths[key] ?? 190;
 
+  const statusCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.forEach((r) => (m[r.status] = (m[r.status] || 0) + 1));
+    return m;
+  }, [rows]);
+
   const sorted = useMemo(() => {
-    const arr = [...rows];
+    const arr = statusFilter ? rows.filter((r) => r.status === statusFilter) : [...rows];
+    const text = (s: SubmissionWithRFI): string => {
+      if (sort.key === "__status") return statuses.find((x) => x.value === s.status)?.label || s.status;
+      if (sort.key === "__owner") return s.owner_email || "";
+      if (sort.key === "__follow") return s.follow_up_at || "";
+      const col = columns.find((c) => c.key === sort.key);
+      return col ? plain(col.get(s)) : "";
+    };
     if (sort.key === "__submitted") {
       arr.sort((a, b) => sort.dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
     } else {
-      const col = columns.find((c) => c.key === sort.key);
-      if (col) {
-        arr.sort((a, b) => {
-          const av = plain(col.get(a));
-          const bv = plain(col.get(b));
-          if (!av && bv) return 1;
-          if (av && !bv) return -1;
-          return sort.dir * av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
-        });
-      }
+      arr.sort((a, b) => {
+        const av = text(a);
+        const bv = text(b);
+        if (!av && bv) return 1;
+        if (av && !bv) return -1;
+        return sort.dir * av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+      });
     }
     return arr;
-  }, [rows, sort, columns]);
+  }, [rows, sort, columns, statusFilter, statuses]);
 
   const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageRows = sorted.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
   const sel = selected ? rows.find((r) => r.id === selected) || null : null;
+  const today = new Date(new Date().toDateString());
 
   const toggleSort = (key: string) =>
     setSort((s) => (s.key === key ? { key, dir: (s.dir * -1) as 1 | -1 } : { key, dir: key === "__submitted" ? -1 : 1 }));
@@ -166,6 +186,23 @@ export default function ResponsesGrid({
   return (
     <div className="flex gap-4 items-start">
       <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <button
+            onClick={() => setStatusFilter(null)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${statusFilter === null ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"}`}
+          >
+            All <span className="opacity-70">{rows.length}</span>
+          </button>
+          {statuses.map((st) => (
+            <button
+              key={st.value}
+              onClick={() => setStatusFilter(statusFilter === st.value ? null : st.value)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${statusFilter === st.value ? "ring-2 ring-offset-1 ring-slate-400" : ""} ${STATUS_PILL[st.value] || STATUS_PILL.new}`}
+            >
+              {st.label} <span className="opacity-70">{statusCounts[st.value] || 0}</span>
+            </button>
+          ))}
+        </div>
         <div className="flex items-center justify-between mb-2">
           <div className="text-sm text-slate-500">
             {sorted.length} row{sorted.length === 1 ? "" : "s"} · {visible.length} of {columns.length} columns
@@ -223,6 +260,11 @@ export default function ResponsesGrid({
                     <div className="px-3 py-2">Respondent</div>
                   </th>
                 )}
+                {([["__status", "Status", 130], ["__owner", "Owner", 170], ["__follow", "Follow-up", 130]] as const).map(([k, text, wd]) => (
+                  <th key={k} className={`${headBase} cursor-pointer hover:bg-slate-200`} style={{ width: wd, minWidth: wd }} onClick={() => toggleSort(k)}>
+                    <div className="flex items-center gap-1 px-3 py-2">{text} <SortIcon k={k} /></div>
+                  </th>
+                ))}
                 {visible.map((c) => (
                   <th
                     key={c.key}
@@ -263,6 +305,17 @@ export default function ResponsesGrid({
                       </td>
                     )}
                     {visible.map((c) => (
+                    <td className={`${cell} ${bg}`}><StatusPill status={s.status} statuses={statuses} /></td>
+                    <td className={`${cell} ${bg}`}><div className="truncate max-w-[160px] text-slate-600">{s.owner_email || <span className="text-slate-300">Unassigned</span>}</div></td>
+                    <td className={`${cell} ${bg} whitespace-nowrap`}>
+                      {s.follow_up_at ? (
+                        <span className={new Date(s.follow_up_at) < today && !["enrolled", "not_interested"].includes(s.status) ? "text-red-600 font-medium" : "text-slate-600"}>
+                          {format(new Date(s.follow_up_at), "MMM d, yyyy")}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
                       <td key={c.key} className={`${cell} ${bg}`} style={{ maxWidth: w(c.key) }} title={plain(c.get(s))}>
                         <div className="overflow-hidden max-h-[3.2rem]"><Cell v={c.get(s)} /></div>
                       </td>
@@ -309,6 +362,9 @@ export default function ResponsesGrid({
                 {sel.submitted_by_name && sel.submitted_by_email && <div className="text-xs text-slate-500">{sel.submitted_by_email}</div>}
               </div>
             )}
+            <div className="pb-3 border-b border-slate-200">
+              <ResponseTracker sub={sel} statuses={statuses} assignees={assignees} onUpdate={onUpdate} />
+            </div>
             {columns.map((c) => (
               <div key={c.key}>
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">{c.label}</div>

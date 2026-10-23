@@ -92,7 +92,20 @@ class RFISubmission(Base):
     submitted_by_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new", server_default="new")
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    follow_up_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     rfi: Mapped["RFI"] = relationship(back_populates="submissions")
+    owner: Mapped["User | None"] = relationship(lazy="joined", foreign_keys=[owner_id])
+
+    @property
+    def owner_email(self) -> str | None:
+        from sqlalchemy import inspect as _inspect
+
+        if "owner" in _inspect(self).unloaded:
+            return None
+        return self.owner.email if self.owner else None
 
 
 class Organisation(Base):
@@ -151,3 +164,17 @@ class ImageAsset(Base):
     builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SubmissionEvent(Base):
+    """Timeline of everything that happens to a response, from submission to resolution."""
+
+    __tablename__ = "submission_events"
+    __table_args__ = (Index("ix_submission_events_submission", "submission_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    submission_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("rfi_submissions.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    actor_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

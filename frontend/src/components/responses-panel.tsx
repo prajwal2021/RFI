@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { fetchAllSubmissions, fetchRFIs, RFI, SubmissionWithRFI } from "@/lib/api";
+import { Assignee, fetchAllSubmissions, fetchAssignees, fetchRFIs, fetchStatuses, RFI, StatusOption, Submission, SubmissionWithRFI } from "@/lib/api";
 import { fieldsForContent, FieldInfo } from "@/lib/submission-fields";
 import ResponsesGrid from "@/components/responses-grid";
 import { buildExportTable } from "@/lib/export";
@@ -47,6 +47,8 @@ export default function ResponsesPanel({
   );
   const [rfis, setRfis] = useState<RFI[]>([]);
   const [subs, setSubs] = useState<SubmissionWithRFI[]>([]);
+  const [statuses, setStatuses] = useState<StatusOption[]>([]);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formFilter, setFormFilter] = useState(initialForm);
@@ -56,7 +58,9 @@ export default function ResponsesPanel({
     setLoading(true);
     setError(null);
     try {
-      const [s, r] = await Promise.all([fetchAllSubmissions(), fetchRFIs()]);
+      const [s, r, st, people] = await Promise.all([fetchAllSubmissions(), fetchRFIs(), fetchStatuses(), fetchAssignees()]);
+      setStatuses(st);
+      setAssignees(people);
       setSubs(s);
       setRfis(r);
     } catch (e) {
@@ -250,6 +254,9 @@ export default function ResponsesPanel({
           rows={filtered}
           fields={fieldsFor(formFilter)}
           formId={formFilter}
+          statuses={statuses}
+          assignees={assignees}
+          onUpdate={(u: Submission) => setSubs((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...u } : x)))}
           onOpenForm={() => router.push(`/rfi/${formFilter}`)}
         />
       )}

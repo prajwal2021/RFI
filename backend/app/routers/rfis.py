@@ -10,7 +10,7 @@ from app.audit import record
 from app.access import get_accessible_rfi, get_accessible_workspace, rfi_visible_clause
 from app.auth import require_user
 from app.database import get_db
-from app.models import RFI, RFIResponse, RFISubmission, RFIStatus, User, Workspace, generate_publish_key
+from app.models import RFI, RFIResponse, RFISubmission, RFIStatus, SubmissionEvent, User, Workspace, generate_publish_key
 from app.schemas import (
     RFICreate, RFIUpdate, RFIOut, RFIMove,
     RFIResponseCreate, RFIResponseOut,
@@ -86,6 +86,8 @@ async def submit_public_rfi(
         submitted_by_email=submission_in.submitted_by_email,
     )
     db.add(submission)
+    await db.flush()
+    db.add(SubmissionEvent(submission_id=submission.id, actor_email=submission_in.submitted_by_email, kind="submitted"))
 
     if rfi.status == RFIStatus.DRAFT or rfi.status == RFIStatus.OPEN:
         rfi.status = RFIStatus.ANSWERED

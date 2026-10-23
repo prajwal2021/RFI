@@ -104,6 +104,10 @@ class SubmissionOut(BaseModel):
     submitted_by_name: str | None
     submitted_by_email: str | None
     created_at: datetime
+    status: str = "new"
+    owner_id: UUID | None = None
+    owner_email: str | None = None
+    follow_up_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -116,6 +120,10 @@ class SubmissionWithRFI(BaseModel):
     submitted_by_name: str | None
     submitted_by_email: str | None
     created_at: datetime
+    status: str = "new"
+    owner_id: UUID | None = None
+    owner_email: str | None = None
+    follow_up_at: datetime | None = None
 
 
 class LoginIn(BaseModel):
