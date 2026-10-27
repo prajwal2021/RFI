@@ -116,6 +116,7 @@ export interface WorkItem {
   updated_at: string | null;
   closed_at: string | null;
   rfi_subject?: string | null;
+  shared_response?: { label: string; value: string }[] | null;
   comments?: { id: string; author_email: string | null; kind: string; text: string; created_at: string }[];
 }
 

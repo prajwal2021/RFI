@@ -131,6 +131,7 @@ export function WorkItemDialog({ meta, preset, onCreated, onClose }: { meta: Met
     kind: preset.kind || "task", team: preset.team || "call_center", category: preset.category || "", title: preset.title || "",
     description: preset.description || "", priority: "normal", due_at: "", owner_id: preset.kind === "handoff" ? "" : meta.me.id,
   });
+  const [shareResponse, setShareResponse] = useState(!!preset.submission_id);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
@@ -144,6 +145,7 @@ export function WorkItemDialog({ meta, preset, onCreated, onClose }: { meta: Met
       onCreated(await createWork({
         ...f, category: f.category || null, owner_id: f.owner_id || null, due_at: f.due_at ? new Date(f.due_at).toISOString() : null,
         contact_id: preset.contact_id || null, submission_id: preset.submission_id || null, rfi_id: preset.rfi_id || null,
+        share_response: !!preset.submission_id && shareResponse,
       }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save");
@@ -190,6 +192,15 @@ export function WorkItemDialog({ meta, preset, onCreated, onClose }: { meta: Met
           <FieldLabel label="Details" help="Everything the next person needs to know so they do not have to call back and ask again." />
           <textarea value={f.description} onChange={(e) => set("description", e.target.value)} rows={4} className={textarea} />
         </label>
+        {preset.submission_id && (
+          <label className="flex items-start gap-2 rounded border border-[#dddbda] bg-[#f3f9ff] px-3 py-2 text-[13px] cursor-pointer">
+            <input type="checkbox" checked={shareResponse} onChange={(e) => setShareResponse(e.target.checked)} className="mt-0.5 h-4 w-4" />
+            <span>
+              <b>Send the RFI response to the Call Center</b>
+              <span className="block text-[12px] text-[#444]">The person&apos;s answers are attached to this item, so the agent can read them before calling. Untick to send only the request above.</span>
+            </span>
+          </label>
+        )}
         <div className="grid sm:grid-cols-3 gap-3">
           <OptSelect label="Priority" opts={meta.priorities} value={f.priority} onChange={(v) => set("priority", v)} />
           <label className="block">
@@ -407,6 +418,19 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                 </div>
               )}
               {w.rfi_subject && <div className="text-[12px] text-[#444]">Form: <b>{w.rfi_subject}</b></div>}
+              {w.shared_response && w.shared_response.length > 0 && (
+                <div className="rounded border border-[#c9dff5] bg-[#f3f9ff]">
+                  <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#014486] border-b border-[#c9dff5]">RFI response shared with you</div>
+                  <dl className="px-3 py-2 space-y-1.5">
+                    {w.shared_response.map((a, i) => (
+                      <div key={i}>
+                        <dt className="text-[11px] text-[#747474]">{a.label}</dt>
+                        <dd className="text-[13px] text-[#181818] whitespace-pre-wrap break-words">{a.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
               {w.description && <div className="rounded bg-[#fafaf9] border border-[#e5e5e5] p-3 whitespace-pre-wrap">{w.description}</div>}
               <label className="block">
                 <FieldLabel label="Resolution" help="Required to close a case. Say what was done so anyone reading later understands the outcome." />

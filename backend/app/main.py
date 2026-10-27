@@ -28,6 +28,7 @@ MIGRATIONS = [
     "ALTER TABLE rfi_submissions ADD COLUMN IF NOT EXISTS contact_id UUID REFERENCES crm_contacts(id) ON DELETE SET NULL",
     "CREATE INDEX IF NOT EXISTS ix_rfi_submissions_contact_id ON rfi_submissions (contact_id)",
     "CREATE SEQUENCE IF NOT EXISTS crm_work_item_seq START 1001",
+    "ALTER TABLE crm_work_items ADD COLUMN IF NOT EXISTS shared_response JSONB",
 ]
 
 

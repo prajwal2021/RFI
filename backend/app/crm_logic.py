@@ -129,6 +129,30 @@ def _survey_fields(content: dict | None) -> list[dict]:
     return out
 
 
+def response_qa(content: dict | None, data: dict) -> list[dict]:
+    """Readable question/answer pairs for a response (images and empty answers skipped)."""
+    fields = _survey_fields(content)
+    if not fields:
+        fields = [{"key": k, "title": k} for k in (data or {}).keys()]
+    out: list[dict] = []
+    for f in fields:
+        v = (data or {}).get(f["key"])
+        if v in (None, "", []):
+            continue
+        if isinstance(v, bool):
+            v = "Yes" if v else "No"
+        elif isinstance(v, list):
+            v = ", ".join(str(x) for x in v if not str(x).startswith("data:"))
+        elif isinstance(v, dict):
+            v = ", ".join(f"{k}: {x}" for k, x in v.items() if not str(x).startswith("data:"))
+        else:
+            v = str(v)
+        if not v or v.startswith("data:"):
+            continue
+        out.append({"label": f["title"], "value": v[:4000]})
+    return out
+
+
 def extract_identity(content: dict | None, data: dict, submitted_by_name: str | None, submitted_by_email: str | None) -> dict:
     fields = _survey_fields(content)
     if not fields:  # HTML forms store answers under their labels

@@ -15,7 +15,7 @@ from app.audit import record
 from app.auth import require_user
 from app.crm_logic import (
     JOURNEY_HELP, JOURNEY_LABELS, add_event, contact_name, contact_visible_clause, find_contact, journeys, next_work_number,
-    norm_email, norm_phone, sync_points,
+    norm_email, norm_phone, response_qa, sync_points,
 )
 from app.crm_meta import INVERSE_RELATION, as_dict, values
 from app.crm_meta import (
@@ -690,6 +690,7 @@ class WorkIn(BaseModel):
     contact_id: UUID | None = None
     rfi_id: UUID | None = None
     submission_id: UUID | None = None
+    share_response: bool = False
 
 
 class WorkPatch(BaseModel):
@@ -764,6 +765,7 @@ async def create_work(body: WorkIn, user: User = Depends(require_user), db: Asyn
     _check_category(body.kind, body.category)
     org_id = user.org_id
     contact = None
+    shared = None
     if body.contact_id:
         contact = await _get_contact(db, user, body.contact_id)
         org_id = contact.org_id if contact.org_id is not None else org_id
@@ -778,6 +780,9 @@ async def create_work(body: WorkIn, user: User = Depends(require_user), db: Asyn
             body.rfi_id = sub.rfi_id
         if not contact and sub.contact_id:
             contact = (await db.execute(select(Contact).where(Contact.id == sub.contact_id))).scalar_one_or_none()
+        if body.share_response:
+            rfi_row = (await db.execute(select(RFI).where(RFI.id == sub.rfi_id))).scalar_one()
+            shared = response_qa(rfi_row.content, sub.data or {})
     owner = await _assignable(db, user, body.owner_id)
     due = body.due_at
     if due is None and body.kind in ("case", "handoff"):
@@ -786,7 +791,7 @@ async def create_work(body: WorkIn, user: User = Depends(require_user), db: Asyn
         number=await next_work_number(db), org_id=org_id, contact_id=contact.id if contact else None, kind=body.kind, team=body.team,
         category=body.category, title=body.title.strip(), description=body.description.strip(), priority=body.priority, due_at=due,
         owner_id=owner.id if owner else None, created_by_id=user.id, created_by_email=user.email, rfi_id=body.rfi_id,
-        submission_id=body.submission_id, status="open",
+        submission_id=body.submission_id, status="open", shared_response=shared,
     )
     db.add(w)
     await db.flush()
@@ -818,7 +823,7 @@ async def get_work(wid: UUID, user: User = Depends(require_user), db: AsyncSessi
     if w.rfi_id:
         rfi_subject = (await db.execute(select(RFI.subject).where(RFI.id == w.rfi_id))).scalar_one_or_none()
     return {
-        **work_out(w, await _users(db, [w.owner_id]), contacts), "rfi_subject": rfi_subject,
+        **work_out(w, await _users(db, [w.owner_id]), contacts), "rfi_subject": rfi_subject, "shared_response": w.shared_response,
         "comments": [{"id": str(x.id), "author_email": x.author_email, "kind": x.kind, "text": x.text, "created_at": x.created_at.isoformat()} for x in comments],
     }
 

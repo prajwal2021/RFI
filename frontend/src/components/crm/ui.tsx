@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Info, X } from "lucide-react";
 import { fetchMeta, JOURNEY_STYLE, Meta, Opt } from "@/lib/crm";
 
@@ -122,7 +123,11 @@ export function Modal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return (
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => setHost(document.body), []);
+  if (!host) return null;
+  // Rendered on <body> so a dialog opened from inside a sticky side panel is not trapped under the page
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center bg-[rgba(8,7,7,0.6)] p-4 overflow-y-auto" onMouseDown={onClose}>
       <div className={`w-full ${wide ? "max-w-3xl" : "max-w-xl"} rounded bg-white shadow-2xl my-8`} onMouseDown={(e) => e.stopPropagation()}>
         <div className="relative px-6 py-4 border-b border-[#e5e5e5] text-center">
@@ -134,7 +139,8 @@ export function Modal({
         <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">{children}</div>
         {footer && <div className="px-6 py-3 border-t border-[#e5e5e5] bg-[#f3f3f3] flex justify-end gap-2 rounded-b">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    host,
   );
 }
 
@@ -184,10 +190,14 @@ export function Toast({ text, onDone }: { text: string; onDone: () => void }) {
     const t = setTimeout(onDone, 3500);
     return () => clearTimeout(t);
   }, [onDone]);
-  return (
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => setHost(document.body), []);
+  if (!host) return null;
+  return createPortal(
     <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[70] rounded bg-[#2e844a] text-white text-[13px] px-4 py-2.5 shadow-lg flex items-center gap-2">
       <Check className="h-4 w-4" /> {text}
-    </div>
+    </div>,
+    host,
   );
 }
 
