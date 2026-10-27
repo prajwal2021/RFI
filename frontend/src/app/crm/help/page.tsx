@@ -151,15 +151,6 @@ export default function HelpPage() {
           ))}
         </div>
       </Card>
-
-      <Card title="Coming next" icon={<LifeBuoy className="h-4 w-4" />} iconColor="#747474">
-        <ul className="list-disc pl-5 space-y-1 text-[13px] text-[#444]">
-          <li><b>CXone screen pop</b>: point CXone&apos;s screen-pop URL at <code className="bg-[#f3f3f3] px-1 rounded">/rfi/crm/pop?phone=&#123;ANI&#125;</code>. Click-to-dial and automatic call logging need CXone API access.</li>
-          <li><b>Email and SMS sending</b> straight from a contact (no-reply email and Twilio), with consent checks already in place.</li>
-          <li><b>Automation</b>: auto-assignment, SLA reminders and escalation to supervisors.</li>
-          <li><b>Reports</b>: lead funnel by course and campaign, agent performance, and the call-to-RFI loop report.</li>
-        </ul>
-      </Card>
     </div>
   );
 }
