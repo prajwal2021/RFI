@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { FileText, Globe, Inbox, TrendingUp, X, ArrowUpRight, Trophy } from "lucide-react";
+import { FileText, Globe, Inbox, TrendingUp, X, ArrowUpRight } from "lucide-react";
 import { Analytics, AnalyticsDay, fetchAnalytics } from "@/lib/api";
 
 const RANGES = [30, 90, 180] as const;
@@ -504,9 +504,7 @@ export default function DashboardAnalytics({
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="flex items-center gap-2 text-base font-semibold text-slate-900">
-              <Trophy className="h-4 w-4 text-amber-500" /> Top forms
-            </h3>
+            <h3 className="text-base font-semibold text-slate-900">Top forms</h3>
             <p className="text-sm text-slate-500 mt-0.5">Most responses in the last {range} days · click a form to read them</p>
           </div>
         </div>
