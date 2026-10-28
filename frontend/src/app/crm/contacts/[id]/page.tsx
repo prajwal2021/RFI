@@ -237,9 +237,15 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
 
   const needsPhone = !!(f.consent_call || f.consent_sms) && !f.do_not_contact && !String(f.phone || "").trim() && !String(f.phones || "").trim();
 
+  const needsEmail = !!f.consent_email && !f.do_not_contact && !String(f.email || "").trim() && !String(f.emails || "").trim();
+
   const save = async () => {
     if (needsPhone) {
       setError("Enter a phone number, or untick OK to call / OK to text.");
+      return;
+    }
+    if (needsEmail) {
+      setError("Enter an email address, or untick OK to email.");
       return;
     }
     setBusy(true);
@@ -294,7 +300,11 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
           <label className="block">
             <FieldLabel label="Primary phone" />
             <input type="tel" value={f.phone ?? ""} onChange={(e) => set("phone", e.target.value)} className={`${input} ${needsPhone ? "border-[#fe9339] ring-1 ring-[#fe9339]" : ""}`} />
-          </label>{txt("email", "Primary email", "", "email")}
+          </label>
+          <label className="block">
+            <FieldLabel label="Primary email" />
+            <input type="email" value={f.email ?? ""} onChange={(e) => set("email", e.target.value)} className={`${input} ${needsEmail ? "border-[#fe9339] ring-1 ring-[#fe9339]" : ""}`} />
+          </label>
           {txt("phones", "Other phones", "Comma separated. All of them are searchable.")}{txt("emails", "Other emails", "Comma separated. Used to match RFI responses.")}
         </div>
         <div className="grid sm:grid-cols-4 gap-3">{txt("street", "Street")}{txt("city", "City")}{txt("state", "State")}{txt("zip", "ZIP")}</div>
@@ -314,6 +324,7 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
             <HelpTip text="They asked us to stop. Blocks outbound calls, RFI links and texts, and turns off all consents." />
           </label>
         </div>
+        {needsEmail && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add an email address.</b> You ticked OK to email, so this person needs an email address we can reach them on.</span></div>}
         {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
         {meta.custom_fields.length > 0 && (
           <>

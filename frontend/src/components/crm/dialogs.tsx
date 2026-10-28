@@ -29,9 +29,15 @@ export function NewContactDialog({
 
   const needsPhone = !!(f.consent_call || f.consent_sms) && !String(f.phone || "").trim();
 
+  const needsEmail = !!f.consent_email && !String(f.email || "").trim();
+
   const save = async (force = false) => {
     if (needsPhone) {
       setError("Enter a phone number, or untick OK to call / OK to text.");
+      return;
+    }
+    if (needsEmail) {
+      setError("Enter an email address, or untick OK to email.");
       return;
     }
     setBusy(true);
@@ -93,7 +99,10 @@ export function NewContactDialog({
               <FieldLabel label="Phone" help="Any format. Used to recognise the caller next time." />
               <input type="tel" value={f.phone || ""} placeholder="(806) 555-0123" onChange={(e) => set("phone", e.target.value)} className={`${input} ${needsPhone ? "border-[#fe9339] ring-1 ring-[#fe9339]" : ""}`} />
             </label>
-            {txt("email", "Email", "", "email", "name@example.com")}
+            <label className="block">
+              <FieldLabel label="Email" />
+              <input type="email" value={f.email || ""} placeholder="name@example.com" onChange={(e) => set("email", e.target.value)} className={`${input} ${needsEmail ? "border-[#fe9339] ring-1 ring-[#fe9339]" : ""}`} />
+            </label>
             {txt("r_number", "R-number", "TTU student ID, e.g. R12345678. Leave blank for prospects.", "text", "R12345678")}
             {txt("date_of_birth", "Date of birth", "Use to confirm identity before discussing records.", "date")}
             {txt("organization_name", "Organization / employer", "Their employer, school district or partner organization.")}
@@ -115,6 +124,7 @@ export function NewContactDialog({
               ))}
             </div>
             {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
+            {needsEmail && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add an email address.</b> You ticked OK to email, so this person needs an email address we can reach them on.</span></div>}
           </fieldset>
         </div>
       )}
