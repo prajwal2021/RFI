@@ -15,7 +15,6 @@ const RFI_USER_HIDDEN = ["/crm/team", "/crm/courses", "/crm/settings"];
 const TABS = [
   { href: "/crm", label: "Home" },
   { href: "/crm/contacts", label: "Contacts" },
-  { href: "/crm/calls", label: "Call Log" },
   { href: "/crm/work", label: "Work Queues" },
   { href: "/crm/team", label: "Team Board" },
   { href: "/crm/courses", label: "Courses" },
@@ -161,7 +160,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
       {rfiOnly && (
         <div className="px-3 sm:px-4 pt-3">
           <div className="rounded border border-[#c9dff5] bg-[#f3f9ff] px-3 py-2 text-[12px] text-[#014486]">
-            <b>RFI user view.</b> You can read every person and every call the Call Center has taken, with the notes (see <b>Call Log</b>). You work from the RFI Team queue and your own hand-offs. Use <b>Send to Call Center</b> on a person to ask for a call.
+            <b>RFI user view.</b> You can read every person and every call the Call Center has taken, with the notes (open a person to see their timeline). You work from the RFI Team queue and your own hand-offs. Use <b>Send to Call Center</b> on a person to ask for a call.
           </div>
         </div>
       )}
