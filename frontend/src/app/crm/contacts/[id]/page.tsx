@@ -14,7 +14,7 @@ import {
 } from "@/lib/crm";
 import { formatValue } from "@/lib/submission-fields";
 import { btn, Card, Empty, ErrorBox, FieldLabel, HelpTip, input, JourneyBadge, Modal, OptSelect, Path, textarea, Toast, useMeta } from "@/components/crm/ui";
-import { SendRfiDialog, WorkDrawer, WorkItemDialog, WorkPreset, WorkRow, WorkTableHead } from "@/components/crm/dialogs";
+import { WorkDrawer, WorkItemDialog, WorkPreset, WorkRow, WorkTableHead } from "@/components/crm/dialogs";
 
 const CHANNEL_ICON: Record<string, JSX.Element> = {
   call: <PhoneCall className="h-3.5 w-3.5" />, voicemail: <Phone className="h-3.5 w-3.5" />, email: <Mail className="h-3.5 w-3.5" />,
@@ -440,7 +440,6 @@ export default function ContactPage() {
             <button onClick={() => work({ kind: "task" })} className={btn.neutral}><ListTodo className="h-3.5 w-3.5" /> New Task</button>
             <button onClick={() => work({ kind: "callback", title: `Call back ${c.name}` })} className={btn.neutral}><CalendarClock className="h-3.5 w-3.5" /> Callback</button>
             <button onClick={() => work({ kind: "case" })} className={btn.neutral}><Briefcase className="h-3.5 w-3.5" /> New Case</button>
-            <button onClick={() => setDialog("rfi")} disabled={c.do_not_contact} className={btn.neutral}><Send className="h-3.5 w-3.5" /> Send RFI</button>
             <button onClick={() => work({ kind: "handoff", team: "rfi", category: "send_rfi", title: `RFI team: ${c.name}` })} className={btn.neutral} title="Pass this person to the RFI team with a reason and notes">
               <Share2 className="h-3.5 w-3.5" /> Send to RFI Team
             </button>
@@ -556,11 +555,9 @@ export default function ContactPage() {
             {closedItems.length > 0 && <div className="px-3 py-2 text-[12px] text-[#747474] border-t border-[#e5e5e5]">{closedItems.length} closed item(s) are on the timeline.</div>}
           </Card>
 
-          <Card title="RFIs" icon={<ClipboardList className="h-4 w-4" />} help="Personal RFI links sent to this person and every RFI response linked to them.">
+          <Card title="RFIs" icon={<ClipboardList className="h-4 w-4" />} help="Every RFI response linked to this person.">
             {data.invitations.length === 0 && data.submissions.length === 0 ? (
-              <Empty text="No RFIs yet.">
-                {!c.do_not_contact && <button onClick={() => setDialog("rfi")} className={btn.neutral}><Send className="h-3.5 w-3.5" /> Send RFI</button>}
-              </Empty>
+              <Empty text="No RFIs yet." />
             ) : (
               <div className="space-y-3 text-[13px]">
                 {data.invitations.map((inv) => (
@@ -606,7 +603,6 @@ export default function ContactPage() {
 
       {/* dialogs */}
       {dialog === "edit" && <EditDialog meta={meta} c={c} onClose={() => setDialog(null)} onSaved={() => done("Saved")} />}
-      {dialog === "rfi" && <SendRfiDialog contact={c} onClose={() => { setDialog(null); load(); }} onSent={() => setToast("Personal link created")} />}
       {workPreset && <WorkItemDialog meta={meta} preset={workPreset} onClose={() => setWorkPreset(null)} onCreated={(w) => done(`${labelOf(meta.work_kinds, w.kind)} #${w.number} created`)} />}
       {openWork && <WorkDrawer meta={meta} id={openWork} onClose={() => setOpenWork(null)} onChanged={load} />}
       {dialog === "interest" && (

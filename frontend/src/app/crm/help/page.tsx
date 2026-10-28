@@ -29,7 +29,6 @@ const ITEMS: [string, string][] = [
   ["Handoff", "Work passed between teams, with a reason and notes. Call Center ↔ RFI Team in both directions."],
   ["Queue", "A team's list of unassigned work. Pick up an item to make it yours; return it to the queue if you cannot finish it."],
   ["Course interest", "A person's interest in one course, moved along the path: Inquiry → Interested → Waitlist → Applied → Enrolled (or Lost)."],
-  ["Personal RFI link", "A form link made for one person (Send RFI). We see when they open it and when they submit it, even if they type a different email."],
   ["Journey status", "Calculated for every person from their calls, RFI links, responses and interests. Tells you the next best action."],
   ["Relationship", "Links people, e.g. parent ↔ student. A call 'on behalf of' someone is logged on both records."],
   ["Consent & Do not contact", "What the person agreed to (call / email / SMS). Do not contact blocks all outbound outreach."],
@@ -43,7 +42,7 @@ const HOWTO: { title: string; steps: string[] }[] = [
     "Search their phone number or name in the top bar.",
     "No match → click 'Create a new contact'. Ask for consent to call, email and text.",
     "On their record, Log activity: Call · Inbound · outcome · reason · course discussed · notes.",
-    "If they need information by form, click Send RFI and read out or email the personal link.",
+    "If they need information by form, click Send to RFI Team and pick the reason; the RFI team sends the form.",
   ] },
   { title: "Someone calls who already filled an RFI", steps: [
     "Search them; the journey badge shows 'Responded…'.",
