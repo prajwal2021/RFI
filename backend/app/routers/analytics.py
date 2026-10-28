@@ -1,8 +1,10 @@
 import re
 from datetime import datetime, timedelta, timezone
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, literal_column, select, text
+from sqlalchemy import and_, func, literal_column, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access import rfi_visible_clause
@@ -15,9 +17,20 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 _TZ = re.compile(r"^[A-Za-z_]+(/[A-Za-z_+\-0-9]+)*$")
 
 
-async def _compute(db: AsyncSession, user: User, days: int, tz: str) -> dict:
+async def _compute(db: AsyncSession, user: User, days: int, tz: str, workspace: str = "", rfi_id: UUID | None = None) -> dict:
     since = datetime.now(timezone.utc) - timedelta(days=days + 1)
-    visible = rfi_visible_clause(user)
+    base_visible = rfi_visible_clause(user)
+    visible = base_visible
+    # Optional filters: one workspace (or "none" = unfiled) and/or one form
+    if workspace == "none":
+        visible = and_(visible, RFI.workspace_id.is_(None))
+    elif workspace:
+        try:
+            visible = and_(visible, RFI.workspace_id == UUID(workspace))
+        except ValueError:
+            pass
+    if rfi_id:
+        visible = and_(visible, RFI.id == rfi_id)
     # Inlined (not bound) so SELECT and GROUP BY use the identical expression; `tz` is regex-validated by the caller.
     tzl = literal_column(f"'{tz}'")
 
@@ -78,9 +91,36 @@ async def _compute(db: AsyncSession, user: User, days: int, tz: str) -> dict:
         )
     ).scalar_one()
 
+    status_rows = (
+        await db.execute(
+            select(RFISubmission.status, func.count(RFISubmission.id))
+            .join(RFI, RFI.id == RFISubmission.rfi_id)
+            .outerjoin(Workspace, RFI.workspace_id == Workspace.id)
+            .where(visible, RFISubmission.created_at >= since)
+            .group_by(RFISubmission.status)
+        )
+    ).all()
+    form_rows = (
+        await db.execute(
+            select(RFI.id, RFI.subject, RFI.workspace_id, Workspace.name)
+            .outerjoin(Workspace, RFI.workspace_id == Workspace.id)
+            .where(base_visible)
+            .order_by(RFI.subject)
+        )
+    ).all()
+    workspaces: dict[str, str] = {}
+    forms = []
+    for fid, subject, wid, wname in form_rows:
+        key = str(wid) if wid else "none"
+        workspaces[key] = wname or "No workspace"
+        forms.append({"id": str(fid), "subject": subject, "workspace": key})
+
     return {
         "days": sorted(by_day.values(), key=lambda x: x["date"]),
         "totals": {"forms": total_forms, "published": published, "responses": total_responses},
+        "by_status": {st: n for st, n in status_rows},
+        "forms": forms,
+        "workspaces": [{"id": k, "name": v} for k, v in sorted(workspaces.items(), key=lambda kv: kv[1].lower())],
     }
 
 
@@ -88,10 +128,12 @@ async def _compute(db: AsyncSession, user: User, days: int, tz: str) -> dict:
 async def overview(
     days: int = 90,
     tz: str = "UTC",
+    workspace: str = "",
+    rfi_id: UUID | None = None,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_db),
 ):
     days = min(max(days, 7), 365)
     tz = tz if _TZ.match(tz) else "UTC"
     known = (await db.execute(text("SELECT 1 FROM pg_timezone_names WHERE name = :n"), {"n": tz})).first()
-    return await _compute(db, user, days, tz if known else "UTC")
+    return await _compute(db, user, days, tz if known else "UTC", workspace, rfi_id)

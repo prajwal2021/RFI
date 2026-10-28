@@ -286,16 +286,19 @@ export interface AnalyticsDay {
 export interface Analytics {
   days: AnalyticsDay[];
   totals: { forms: number; published: number; responses: number };
+  by_status: Record<string, number>;
+  forms: { id: string; subject: string; workspace: string }[];
+  workspaces: { id: string; name: string }[];
 }
 
-export async function fetchAnalytics(days: number): Promise<Analytics> {
+export async function fetchAnalytics(days: number, workspace = "", rfiId = ""): Promise<Analytics> {
   let tz = "UTC";
   try {
     tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   } catch {
     // fall back to UTC
   }
-  const res = await apiFetch(`${API_BASE}/analytics/?days=${days}&tz=${encodeURIComponent(tz)}`);
+  const res = await apiFetch(`${API_BASE}/analytics/?days=${days}&tz=${encodeURIComponent(tz)}${workspace ? `&workspace=${encodeURIComponent(workspace)}` : ""}${rfiId ? `&rfi_id=${rfiId}` : ""}`);
   if (!res.ok) throw new Error("Failed to load analytics");
   return res.json();
 }

@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [publishedOnly, setPublishedOnly] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showNewWs, setShowNewWs] = useState(false);
   const [newWsName, setNewWsName] = useState("");
@@ -140,11 +141,19 @@ export default function DashboardPage() {
 
   const filteredRFIs = rfis.filter(
     (rfi) =>
-      rfi.subject.toLowerCase().includes(search.toLowerCase()) ||
-      rfi.created_by.toLowerCase().includes(search.toLowerCase())
+      (!publishedOnly || rfi.is_published) &&
+      (rfi.subject.toLowerCase().includes(search.toLowerCase()) ||
+        rfi.created_by.toLowerCase().includes(search.toLowerCase()))
   );
 
   const hasOrg = !!me?.org_id;
+
+  function openForms(published: boolean) {
+    setFilterStatus("");
+    setPublishedOnly(published);
+    setSearch("");
+    setTab("rfis");
+  }
 
   function openResponses(form: string, from: string, to: string) {
     setRespFilter({ form, from, to, nonce: Date.now() });
@@ -173,7 +182,7 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-semibold tracking-tight text-slate-900">Overview</h2>
                 <p className="text-sm text-slate-500">Forms created and responses received across your workspaces.</p>
               </div>
-              <DashboardAnalytics onOpenResponses={openResponses} />
+              <DashboardAnalytics onOpenResponses={openResponses} onOpenForms={openForms} />
             </div>
           )}
 
@@ -345,13 +354,16 @@ export default function DashboardPage() {
                       {["", "draft", "open", "answered", "closed"].map((status) => (
                         <Button
                           key={status}
-                          variant={filterStatus === status ? "default" : "outline"}
+                          variant={filterStatus === status && !publishedOnly ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setFilterStatus(status)}
+                          onClick={() => { setFilterStatus(status); setPublishedOnly(false); }}
                         >
                           {status || "All"}
                         </Button>
                       ))}
+                      <Button variant={publishedOnly ? "default" : "outline"} size="sm" onClick={() => { setFilterStatus(""); setPublishedOnly(!publishedOnly); }}>
+                        published
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

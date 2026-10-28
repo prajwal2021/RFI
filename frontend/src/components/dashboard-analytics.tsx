@@ -27,9 +27,20 @@ interface Bucket {
   responses: number;
 }
 
-function Kpi({ icon, label, value, tint, hint }: { icon: React.ReactNode; label: string; value: number | string; tint: string; hint?: string }) {
+function Kpi({
+  icon, label, value, tint, hint, onClick,
+}: {
+  icon: React.ReactNode; label: string; value: number | string; tint: string; hint?: string; onClick?: () => void;
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => onClick && (e.key === "Enter" || e.key === " ") && onClick()}
+      title={onClick ? "Click to see these" : undefined}
+      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${onClick ? "cursor-pointer transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-200" : ""}`}
+    >
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-slate-500">{label}</span>
         <span className={`h-9 w-9 rounded-lg flex items-center justify-center ${tint}`}>{icon}</span>
@@ -40,10 +51,79 @@ function Kpi({ icon, label, value, tint, hint }: { icon: React.ReactNode; label:
   );
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  new: "New", contacted: "Contacted", interested: "Interested", applied: "Applied", enrolled: "Enrolled", not_interested: "Not interested",
+};
+const STATUS_COLOR: Record<string, string> = {
+  new: "#64748b", contacted: "#0ea5e9", interested: "#6366f1", applied: "#f59e0b", enrolled: "#10b981", not_interested: "#ef4444",
+};
+const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#0ea5e9", "#ec4899", "#8b5cf6", "#14b8a6", "#ef4444"];
+
+/** Salesforce-style donut: click a slice or a legend row to drill in. */
+function Donut({
+  slices, onPick, centerLabel,
+}: {
+  slices: { key: string; label: string; value: number; color: string }[];
+  onPick?: (key: string) => void;
+  centerLabel: string;
+}) {
+  const total = slices.reduce((a, s) => a + s.value, 0);
+  const R = 52;
+  const C = 2 * Math.PI * R;
+  let acc = 0;
+  return (
+    <div className="flex items-center gap-5 flex-wrap">
+      <svg viewBox="0 0 140 140" className="h-36 w-36 shrink-0">
+        <g transform="rotate(-90 70 70)">
+          <circle cx="70" cy="70" r={R} fill="none" stroke="#f1f5f9" strokeWidth="20" />
+          {total > 0 &&
+            slices
+              .filter((s) => s.value > 0)
+              .map((s) => {
+                const len = (s.value / total) * C;
+                const el = (
+                  <circle
+                    key={s.key}
+                    cx="70" cy="70" r={R} fill="none" stroke={s.color} strokeWidth="20"
+                    strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-acc}
+                    className={onPick ? "cursor-pointer hover:opacity-80" : ""}
+                    onClick={() => onPick?.(s.key)}
+                  >
+                    <title>{`${s.label}: ${s.value}`}</title>
+                  </circle>
+                );
+                acc += len;
+                return el;
+              })}
+        </g>
+        <text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="600" fill="#0f172a">{total}</text>
+        <text x="70" y="84" textAnchor="middle" fontSize="9" fill="#94a3b8">{centerLabel}</text>
+      </svg>
+      <ul className="flex-1 min-w-[150px] space-y-1">
+        {slices.map((s) => (
+          <li key={s.key}>
+            <button
+              onClick={() => onPick?.(s.key)}
+              disabled={!onPick}
+              className="w-full flex items-center gap-2 text-left text-sm rounded px-1.5 py-0.5 hover:bg-slate-50 disabled:hover:bg-transparent"
+            >
+              <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
+              <span className="flex-1 truncate text-slate-700">{s.label}</span>
+              <span className="font-semibold text-slate-900 tabular-nums">{s.value}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function DashboardAnalytics({
   onOpenResponses,
+  onOpenForms,
 }: {
   onOpenResponses: (rfiId: string, from: string, to: string) => void;
+  onOpenForms: (publishedOnly: boolean) => void;
 }) {
   const router = useRouter();
   const [range, setRange] = useState<(typeof RANGES)[number]>(30);
@@ -51,15 +131,23 @@ export default function DashboardAnalytics({
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [hover, setHover] = useState<number | null>(null);
+  const [workspace, setWorkspace] = useState("");
+  const [formId, setFormId] = useState("");
+  const [options, setOptions] = useState<Pick<Analytics, "forms" | "workspaces">>({ forms: [], workspaces: [] });
 
   useEffect(() => {
     setData(null);
     setError(null);
     setSelected(null);
-    fetchAnalytics(range)
-      .then(setData)
+    fetchAnalytics(range, workspace, formId)
+      .then((d) => {
+        setData(d);
+        setOptions((o) => (o.forms.length ? o : { forms: d.forms, workspaces: d.workspaces }));
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load analytics"));
-  }, [range]);
+  }, [range, workspace, formId]);
+
+  const formChoices = options.forms.filter((f) => !workspace || f.workspace === workspace);
 
   const byDate = useMemo(() => {
     const m = new Map<string, AnalyticsDay>();
@@ -160,17 +248,46 @@ export default function DashboardAnalytics({
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <span className="text-slate-500 font-medium">Show</span>
+        <select
+          value={workspace}
+          onChange={(e) => { setWorkspace(e.target.value); setFormId(""); }}
+          className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          aria-label="Filter by workspace"
+        >
+          <option value="">All workspaces</option>
+          {options.workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+        </select>
+        <select
+          value={formId}
+          onChange={(e) => setFormId(e.target.value)}
+          className="h-9 max-w-[280px] rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          aria-label="Filter by form"
+        >
+          <option value="">All forms</option>
+          {formChoices.map((f) => <option key={f.id} value={f.id}>{f.subject}</option>)}
+        </select>
+        {(workspace || formId) && (
+          <button onClick={() => { setWorkspace(""); setFormId(""); }} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800">
+            <X className="h-3.5 w-3.5" /> Clear filters
+          </button>
+        )}
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi icon={<FileText className="h-5 w-5 text-indigo-600" />} tint="bg-indigo-50" label="Total forms" value={data?.totals.forms ?? "—"} />
-        <Kpi icon={<Globe className="h-5 w-5 text-emerald-600" />} tint="bg-emerald-50" label="Published" value={data?.totals.published ?? "—"} />
-        <Kpi icon={<Inbox className="h-5 w-5 text-violet-600" />} tint="bg-violet-50" label="Total responses" value={data?.totals.responses ?? "—"} />
+        <Kpi icon={<FileText className="h-5 w-5 text-indigo-600" />} tint="bg-indigo-50" label="Total forms" value={data?.totals.forms ?? "—"} onClick={() => onOpenForms(false)} />
+        <Kpi icon={<Globe className="h-5 w-5 text-emerald-600" />} tint="bg-emerald-50" label="Published" value={data?.totals.published ?? "—"} onClick={() => onOpenForms(true)} />
+        <Kpi icon={<Inbox className="h-5 w-5 text-violet-600" />} tint="bg-violet-50" label="Total responses" value={data?.totals.responses ?? "—"} onClick={() => onOpenResponses(formId, "", "")} />
         <Kpi
           icon={<TrendingUp className="h-5 w-5 text-amber-600" />}
           tint="bg-amber-50"
           label={`Responses · last ${range} days`}
           value={data ? sumResponses : "—"}
           hint={data ? `${avg.toFixed(1)} per day on average` : undefined}
+          onClick={() => onOpenResponses(formId, dates[0], dates[dates.length - 1])}
         />
       </div>
 
@@ -348,6 +465,40 @@ export default function DashboardAnalytics({
           )}
         </div>
       )}
+
+      {/* Salesforce-style charts */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-slate-900">Response pipeline</h3>
+          <p className="text-sm text-slate-500 mt-0.5 mb-4">Where responses from the last {range} days stand · click to read them</p>
+          {!data ? (
+            <div className="py-8 text-center text-sm text-slate-400">Loading…</div>
+          ) : sumResponses === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-400">No responses in this period yet.</div>
+          ) : (
+            <Donut
+              centerLabel="responses"
+              slices={Object.keys(STATUS_LABEL).map((k) => ({ key: k, label: STATUS_LABEL[k], value: data.by_status[k] || 0, color: STATUS_COLOR[k] }))}
+              onPick={() => onOpenResponses(formId, dates[0], dates[dates.length - 1])}
+            />
+          )}
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-slate-900">Responses by form</h3>
+          <p className="text-sm text-slate-500 mt-0.5 mb-4">Share of the last {range} days · click a slice to read them</p>
+          {!data ? (
+            <div className="py-8 text-center text-sm text-slate-400">Loading…</div>
+          ) : topForms.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-400">No responses in this period yet.</div>
+          ) : (
+            <Donut
+              centerLabel="responses"
+              slices={topForms.map((f, i) => ({ key: f.id, label: f.subject, value: f.count, color: PALETTE[i % PALETTE.length] }))}
+              onPick={(id) => onOpenResponses(id, dates[0], dates[dates.length - 1])}
+            />
+          )}
+        </div>
+      </div>
 
       {/* Top forms */}
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
