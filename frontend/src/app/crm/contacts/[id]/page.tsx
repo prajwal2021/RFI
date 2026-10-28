@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import {
-  Ban, BookOpen, Briefcase, CalendarClock, ClipboardList, FileText, GitMerge, Link2, ListTodo, Mail, MessageSquare, Pencil,
+  AlertTriangle, Ban, BookOpen, Briefcase, CalendarClock, ClipboardList, FileText, GitMerge, Link2, ListTodo, Mail, MessageSquare, Pencil,
   Phone, PhoneCall, Send, Share2, StickyNote, Trash2, UserRound, Users,
 } from "lucide-react";
 import {
@@ -235,7 +235,13 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
 
+  const needsPhone = !!(f.consent_call || f.consent_sms) && !f.do_not_contact && !String(f.phone || "").trim() && !String(f.phones || "").trim();
+
   const save = async () => {
+    if (needsPhone) {
+      setError("Enter a phone number, or untick OK to call / OK to text.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -285,7 +291,10 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
         </div>
         <h3 className="text-[13px] font-bold border-b border-[#e5e5e5] pb-1">Contact methods</h3>
         <div className="grid sm:grid-cols-2 gap-3">
-          {txt("phone", "Primary phone", "", "tel")}{txt("email", "Primary email", "", "email")}
+          <label className="block">
+            <FieldLabel label="Primary phone" />
+            <input type="tel" value={f.phone ?? ""} onChange={(e) => set("phone", e.target.value)} className={`${input} ${needsPhone ? "border-[#fe9339] ring-1 ring-[#fe9339]" : ""}`} />
+          </label>{txt("email", "Primary email", "", "email")}
           {txt("phones", "Other phones", "Comma separated. All of them are searchable.")}{txt("emails", "Other emails", "Comma separated. Used to match RFI responses.")}
         </div>
         <div className="grid sm:grid-cols-4 gap-3">{txt("street", "Street")}{txt("city", "City")}{txt("state", "State")}{txt("zip", "ZIP")}</div>
@@ -305,6 +314,7 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
             <HelpTip text="They asked us to stop. Blocks outbound calls, RFI links and texts, and turns off all consents." />
           </label>
         </div>
+        {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
         {meta.custom_fields.length > 0 && (
           <>
             <h3 className="text-[13px] font-bold border-b border-[#e5e5e5] pb-1">Additional fields</h3>

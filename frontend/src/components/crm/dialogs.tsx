@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
-import { Copy, ExternalLink, Hand, Send, Undo2, X } from "lucide-react";
+import { AlertTriangle, Copy, ExternalLink, Hand, Send, Undo2, X } from "lucide-react";
 import {
   commentWork, Contact, createContact, createInvitation, createWork, CrmError, getWork, labelOf, Meta, PRIORITY_STYLE,
   sendableRfis, toLocalInput, updateWork, WorkItem,
@@ -27,7 +27,13 @@ export function NewContactDialog({
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
 
+  const needsPhone = !!(f.consent_call || f.consent_sms) && !String(f.phone || "").trim();
+
   const save = async (force = false) => {
+    if (needsPhone) {
+      setError("Enter a phone number, or untick OK to call / OK to text.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -83,7 +89,10 @@ export function NewContactDialog({
           <div className="grid sm:grid-cols-2 gap-3">
             {txt("first_name", "First name")}
             {txt("last_name", "Last name")}
-            {txt("phone", "Phone", "Any format. Used to recognise the caller next time.", "tel", "(806) 555-0123")}
+            <label className="block">
+              <FieldLabel label="Phone" help="Any format. Used to recognise the caller next time." />
+              <input type="tel" value={f.phone || ""} placeholder="(806) 555-0123" onChange={(e) => set("phone", e.target.value)} className={`${input} ${needsPhone ? "border-[#fe9339] ring-1 ring-[#fe9339]" : ""}`} />
+            </label>
             {txt("email", "Email", "", "email", "name@example.com")}
             {txt("r_number", "R-number", "TTU student ID, e.g. R12345678. Leave blank for prospects.", "text", "R12345678")}
             {txt("date_of_birth", "Date of birth", "Use to confirm identity before discussing records.", "date")}
@@ -105,6 +114,7 @@ export function NewContactDialog({
                 </label>
               ))}
             </div>
+            {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
           </fieldset>
         </div>
       )}
