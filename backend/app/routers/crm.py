@@ -59,7 +59,7 @@ def _contact_scope(user: User):
     visible_rfis = select(RFI.id).outerjoin(Workspace, RFI.workspace_id == Workspace.id).where(rfi_visible_clause(user))
     return and_(base, or_(
         exists().where(RFISubmission.contact_id == Contact.id, RFISubmission.rfi_id.in_(visible_rfis)),
-        exists().where(WorkItem.contact_id == Contact.id, or_(WorkItem.created_by_id == user.id, WorkItem.owner_id == user.id)),
+        exists().where(WorkItem.contact_id == Contact.id, or_(WorkItem.team == "rfi", WorkItem.created_by_id == user.id, WorkItem.owner_id == user.id)),
         Contact.created_by_id == user.id,
     ))
 
