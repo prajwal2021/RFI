@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Crown, Network, Shield, User as UserIcon, Users } from "lucide-react";
+import { Building2, Network, Shield, User as UserIcon, Users } from "lucide-react";
 import type { Organisation, OrgUser } from "@/lib/auth";
 
 function UserCard({ u, onClick }: { u: OrgUser; onClick?: () => void }) {
@@ -88,7 +88,7 @@ export default function UserTree({
           <li>
             <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white px-6 py-4 shadow-md min-w-[260px] text-center">
               <div className="flex items-center justify-center gap-2 text-base font-semibold">
-                <Crown className="h-4 w-4" /> RFI System
+                RFI System
               </div>
               <div className="mt-1 text-xs text-indigo-100">
                 {orgs.length} organisation{orgs.length === 1 ? "" : "s"} · {allUsers.length} user{allUsers.length === 1 ? "" : "s"} · {admins} admin{admins === 1 ? "" : "s"}
