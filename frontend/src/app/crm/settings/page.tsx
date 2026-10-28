@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ListChecks, Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { ListChecks, Pencil, Plus, Search, Settings, Trash2 } from "lucide-react";
+import { makeMatcher } from "@/lib/search";
 import { createField, CustomField, deleteField, labelOf, Opt, updateField } from "@/lib/crm";
 import { btn, Card, Empty, ErrorBox, FieldLabel, input, Modal, OptSelect, Toast, useMeta } from "@/components/crm/ui";
 
@@ -27,6 +28,7 @@ export default function SetupPage() {
   const [edit, setEdit] = useState<Partial<CustomField> & { optionsText?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [q, setQ] = useState("");
 
   const save = async () => {
     if (!edit?.label?.trim()) return setError("Give the field a label");
@@ -46,22 +48,40 @@ export default function SetupPage() {
 
   if (!meta) return <div className="p-6 text-[13px] text-[#747474]">Loading…</div>;
 
+  const ql = q.trim();
+  const match = makeMatcher(ql);
+  const fields = meta.custom_fields.filter((f) => match(`${f.label} ${f.key} ${f.help_text} ${f.options.join(" ")} custom field`));
+  // A list whose title/help matches shows in full; otherwise only the values that match
+  const lists = LISTS.map((l) => {
+    const opts = (meta as any)[l.key] as Opt[];
+    const whole = match(`${l.title} ${l.help}`);
+    return { ...l, opts: whole ? opts : opts.filter((o) => match(`${l.title} ${o.label} ${o.description}`)) };
+  }).filter((l) => l.opts.length > 0);
+  const nothing = !!ql && fields.length === 0 && lists.length === 0;
+
   return (
     <div className="max-w-6xl mx-auto space-y-3">
       <div>
         <h1 className="text-[20px] font-bold">Setup</h1>
         <p className="text-[13px] text-[#444]">Add your own fields to contacts and review the standard lists the app uses.</p>
       </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#747474]" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search setup… e.g. classify, outcome, priority, case category" className={`${input} pl-9 h-9`} />
+      </div>
+      {nothing && (
+        <div className="rounded border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#747474]">Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word.</div>
+      )}
       <ErrorBox text={error} />
-      <Card title="Custom contact fields" icon={<Settings className="h-4 w-4" />} iconColor="#747474"
+      {(!ql || fields.length > 0) && <Card title="Custom contact fields" icon={<Settings className="h-4 w-4" />} iconColor="#747474"
         help="Extra fields shown on every contact (Edit → Additional fields), e.g. Employer ID or Expected graduation. Anyone can add; only admins can delete."
         actions={<button onClick={() => setEdit({ field_type: "text", optionsText: "" })} className={btn.brand}><Plus className="h-4 w-4" /> New field</button>} bodyClass="p-0">
-        {meta.custom_fields.length === 0 ? <Empty text="No custom fields yet." /> : (
+        {fields.length === 0 ? <Empty text="No custom fields yet." /> : (
           <table className="w-full text-[13px]">
             <thead><tr className="bg-[#fafaf9] border-b border-[#dddbda] text-left text-[11px] uppercase tracking-wide text-[#444]">
               <th className="px-3 py-2">Label</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Help text</th><th className="px-3 py-2" /></tr></thead>
             <tbody>
-              {meta.custom_fields.map((f) => (
+              {fields.map((f) => (
                 <tr key={f.id} className="border-b border-[#e5e5e5]">
                   <td className="px-3 py-2 font-medium">{f.label}<div className="text-[11px] text-[#747474] font-mono">{f.key}</div></td>
                   <td className="px-3 py-2">{labelOf(meta.custom_field_types, f.field_type)}{f.options.length > 0 && <div className="text-[11px] text-[#747474]">{f.options.join(", ")}</div>}</td>
@@ -79,23 +99,23 @@ export default function SetupPage() {
             </tbody>
           </table>
         )}
-      </Card>
+      </Card>}
 
-      <Card title="Standard lists" icon={<ListChecks className="h-4 w-4" />} help="Built-in values with the descriptions agents see as help text. Ask an admin if you need a value added.">
+      {lists.length > 0 && <Card title="Standard lists" icon={<ListChecks className="h-4 w-4" />} help="Built-in values with the descriptions agents see as help text. Ask an admin if you need a value added.">
         <div className="grid md:grid-cols-2 gap-4">
-          {LISTS.map((l) => (
+          {lists.map((l) => (
             <div key={l.key}>
               <h3 className="text-[13px] font-bold">{l.title}</h3>
               <p className="text-[12px] text-[#747474] mb-1">{l.help}</p>
               <ul className="rounded border border-[#e5e5e5] divide-y divide-[#f3f3f3]">
-                {((meta as any)[l.key] as Opt[]).map((o) => (
+                {l.opts.map((o) => (
                   <li key={o.value} className="px-2.5 py-1.5 text-[12px]"><b>{o.label}</b> — <span className="text-[#444]">{o.description}</span></li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-      </Card>
+      </Card>}
 
       {edit && (
         <Modal title={edit.id ? `Edit ${edit.label}` : "New custom field"} onClose={() => setEdit(null)}

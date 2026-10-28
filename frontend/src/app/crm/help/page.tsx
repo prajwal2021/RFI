@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BookOpenCheck, Compass, LifeBuoy, Route, Search } from "lucide-react";
 import { Opt } from "@/lib/crm";
 import { Card, input, JourneyBadge, useMeta } from "@/components/crm/ui";
+import { makeMatcher } from "@/lib/search";
 
 const SCREENS: [string, string][] = [
   ["Global search (top bar)", "Type a name, phone (any format), email, R-number or organization. Results show as you type. Always search before creating a contact."],
@@ -88,8 +89,8 @@ const HOWTO: { title: string; steps: string[] }[] = [
   ] },
 ];
 
-function List({ items, q }: { items: [string, string][]; q: string }) {
-  const f = items.filter(([a, b]) => !q || `${a} ${b}`.toLowerCase().includes(q));
+function List({ items }: { items: [string, string][] }) {
+  const f = items;
   return (
     <dl className="divide-y divide-[#f3f3f3]">
       {f.map(([a, b]) => (
@@ -97,7 +98,6 @@ function List({ items, q }: { items: [string, string][]; q: string }) {
           <dt className="font-semibold">{a}</dt><dd className="text-[#444]">{b}</dd>
         </div>
       ))}
-      {f.length === 0 && <p className="py-2 text-[13px] text-[#747474]">No matches.</p>}
     </dl>
   );
 }
@@ -105,7 +105,15 @@ function List({ items, q }: { items: [string, string][]; q: string }) {
 export default function HelpPage() {
   const { meta } = useMeta();
   const [q, setQ] = useState("");
-  const ql = q.trim().toLowerCase();
+  const ql = q.trim();
+  const match = makeMatcher(ql);
+  const LOOP = "how the loop works call contact log personal rfi link open submit matched interest enrolled timeline journey status";
+  const journey = (meta?.journey || []).filter((o: Opt) => match(`${o.label} ${o.description} journey status`));
+  const screens = SCREENS.filter(([a, b]) => match(`${a} ${b}`));
+  const items = ITEMS.filter(([a, b]) => match(`${a} ${b}`));
+  const howto = HOWTO.filter((h) => match(`${h.title} ${h.steps.join(" ")}`));
+  const showLoop = !ql || match(LOOP);
+  const nothing = !!ql && !showLoop && !journey.length && !screens.length && !items.length && !howto.length;
 
   return (
     <div className="max-w-5xl mx-auto space-y-3">
@@ -115,10 +123,15 @@ export default function HelpPage() {
       </div>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#747474]" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search help…" className={`${input} pl-9 h-9`} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search help… e.g. classify a call, duplicate, callback, do not contact" className={`${input} pl-9 h-9`} autoFocus />
       </div>
+      {nothing && (
+        <div className="rounded border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#747474]">
+          Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word, such as <b>call</b>, <b>case</b>, <b>RFI</b> or <b>queue</b>.
+        </div>
+      )}
 
-      <Card title="How the loop works" icon={<Route className="h-4 w-4" />} iconColor="#2e844a">
+      {showLoop && <Card title="How the loop works" icon={<Route className="h-4 w-4" />} iconColor="#2e844a">
         <ol className="list-decimal pl-5 space-y-1 text-[13px] text-[#444]">
           <li>A person calls (or is called). The agent finds or creates their <b>contact</b> and <b>logs the call</b>.</li>
           <li>If they need a form, the agent sends a <b>personal RFI link</b>, or hands off to the RFI team.</li>
@@ -126,31 +139,31 @@ export default function HelpPage() {
           <li>Courses they pick on the RFI or discuss on the call become <b>course interests</b>, moved along the path to <b>Enrolled</b>.</li>
           <li>Both teams see the same <b>timeline</b> and <b>journey status</b>, so nobody has to ask &ldquo;did they call?&rdquo; or &ldquo;did they fill the form?&rdquo;.</li>
         </ol>
-      </Card>
+      </Card>}
 
-      <Card title="Journey statuses" icon={<Compass className="h-4 w-4" />} iconColor="#dd7a01" help="Calculated automatically for every person. Use them as call lists.">
+      {journey.length > 0 && <Card title="Journey statuses" icon={<Compass className="h-4 w-4" />} iconColor="#dd7a01" help="Calculated automatically for every person. Use them as call lists.">
         <ul className="space-y-1.5">
-          {(meta?.journey || []).filter((o: Opt) => !ql || `${o.label} ${o.description}`.toLowerCase().includes(ql)).map((o: Opt) => (
+          {journey.map((o: Opt) => (
             <li key={o.value} className="grid sm:grid-cols-[220px_1fr] gap-1 sm:gap-4 text-[13px]">
               <span><JourneyBadge value={o.value} label={o.label} /></span><span className="text-[#444]">{o.description}</span>
             </li>
           ))}
         </ul>
-      </Card>
+      </Card>}
 
-      <Card title="Screens" icon={<BookOpenCheck className="h-4 w-4" />}><List items={SCREENS} q={ql} /></Card>
-      <Card title="Things you work with" icon={<LifeBuoy className="h-4 w-4" />} iconColor="#5867e8"><List items={ITEMS} q={ql} /></Card>
+      {screens.length > 0 && <Card title="Screens" icon={<BookOpenCheck className="h-4 w-4" />}><List items={screens} /></Card>}
+      {items.length > 0 && <Card title="Things you work with" icon={<LifeBuoy className="h-4 w-4" />} iconColor="#5867e8"><List items={items} /></Card>}
 
-      <Card title="How to…" icon={<Route className="h-4 w-4" />} iconColor="#06a59a">
+      {howto.length > 0 && <Card title="How to…" icon={<Route className="h-4 w-4" />} iconColor="#06a59a">
         <div className="grid md:grid-cols-2 gap-4">
-          {HOWTO.filter((h) => !ql || `${h.title} ${h.steps.join(" ")}`.toLowerCase().includes(ql)).map((h) => (
+          {howto.map((h) => (
             <div key={h.title} className="rounded border border-[#e5e5e5] p-3">
               <h3 className="text-[13px] font-bold mb-1">{h.title}</h3>
               <ol className="list-decimal pl-5 space-y-0.5 text-[13px] text-[#444]">{h.steps.map((s) => <li key={s}>{s}</li>)}</ol>
             </div>
           ))}
         </div>
-      </Card>
+      </Card>}
     </div>
   );
 }
