@@ -51,17 +51,9 @@ async def _users(db: AsyncSession, ids) -> dict:
 
 
 def _contact_scope(user: User):
-    """Who can this user see? Call Center users: the whole organisation. RFI-only users: just people tied to their own
-    forms (a response or a hand-off they sent or received)."""
-    base = contact_visible_clause(user)
-    if not is_rfi_only(user):
-        return base
-    visible_rfis = select(RFI.id).outerjoin(Workspace, RFI.workspace_id == Workspace.id).where(rfi_visible_clause(user))
-    return and_(base, or_(
-        exists().where(RFISubmission.contact_id == Contact.id, RFISubmission.rfi_id.in_(visible_rfis)),
-        exists().where(WorkItem.contact_id == Contact.id, or_(WorkItem.team == "rfi", WorkItem.created_by_id == user.id, WorkItem.owner_id == user.id)),
-        Contact.created_by_id == user.id,
-    ))
+    """Everyone in the user's organisation. The RFI team reads the Call Center's people and calls (every call and note)
+    so nobody has to ask what was said; what RFI users cannot do is change calls, courses or contacts' history."""
+    return contact_visible_clause(user)
 
 
 async def _get_contact(db: AsyncSession, user: User, cid: UUID) -> Contact:
@@ -350,9 +342,9 @@ async def contact_360(cid: UUID, user: User = Depends(require_user), db: AsyncSe
     js = await journeys(db, [c])
 
     interactions = (await db.execute(select(Interaction).where(Interaction.contact_id == c.id).order_by(Interaction.occurred_at.desc()).limit(500))).scalars().all()
-    strip = is_rfi_only(user)  # RFI users see that a call happened and its outcome, not the notes
+    strip = False  # the RFI team sees full call notes
     work_q = select(WorkItem).where(WorkItem.contact_id == c.id)
-    if strip:
+    if is_rfi_only(user):  # work items stay trimmed: the RFI team's queue and anything they sent or own
         work_q = work_q.where(_work_visible(user))
     work = (await db.execute(work_q.order_by(WorkItem.created_at.desc()))).scalars().all()
     interests = (await db.execute(select(Interest, Course).join(Course, Course.id == Interest.course_id).where(Interest.contact_id == c.id).order_by(Course.name))).all()
@@ -415,6 +407,54 @@ async def contact_360(cid: UUID, user: User = Depends(require_user), db: AsyncSe
                          "created_at": inv.created_at.isoformat(), "opened_at": inv.opened_at.isoformat() if inv.opened_at else None,
                          "open_count": inv.open_count, "submitted_at": inv.submitted_at.isoformat() if inv.submitted_at else None} for inv, r in invs],
         "timeline": timeline,
+    }
+
+
+@router.get("/calls")
+async def call_log(
+    q: str = "", agent: str = "", outcome: str = "", channel: str = "", days: int = 30, limit: int = 200,
+    user: User = Depends(require_user), db: AsyncSession = Depends(get_db),
+):
+    """Every call (and voicemail by default) taken and noted by the Call Center, newest first. Open to the RFI team too."""
+    since = now() - timedelta(days=min(max(days, 1), 3650))
+    query = (
+        select(Interaction, Contact)
+        .join(Contact, Contact.id == Interaction.contact_id)
+        .where(_contact_scope(user), Interaction.occurred_at >= since)
+    )
+    if channel:
+        query = query.where(Interaction.channel == channel)
+    else:
+        query = query.where(Interaction.channel.in_(("call", "voicemail")))
+    if outcome:
+        query = query.where(Interaction.outcome == outcome)
+    if agent == "me":
+        query = query.where(Interaction.agent_id == user.id)
+    elif agent:
+        query = query.where(Interaction.agent_email == agent)
+    q = q.strip()
+    if q:
+        digits = re.sub(r"\D", "", q)
+        conds = [
+            func.concat(Contact.first_name, " ", Contact.last_name).ilike(f"%{q}%"),
+            Contact.organization_name.ilike(f"%{q}%"),
+            Interaction.subject.ilike(f"%{q}%"),
+            Interaction.notes.ilike(f"%{q}%"),
+        ]
+        if len(digits) >= 4:
+            conds.append(Contact.id.in_(select(ContactPoint.contact_id).where(ContactPoint.kind == "phone", ContactPoint.normalized.like(f"%{digits[-10:]}%"))))
+        query = query.where(or_(*conds))
+    rows = (await db.execute(query.order_by(Interaction.occurred_at.desc()).limit(min(max(limit, 1), 500)))).all()
+    courses = {co.id: co.name for co in (await db.execute(select(Course))).scalars().all()}
+    agents = sorted({i.agent_email for i, _ in rows if i.agent_email})
+    return {
+        "agents": agents,
+        "rows": [{
+            "id": str(i.id), "at": i.occurred_at.isoformat(), "channel": i.channel, "direction": i.direction, "outcome": i.outcome,
+            "reason": i.reason, "subject": i.subject, "notes": i.notes, "duration_minutes": i.duration_minutes,
+            "agent": i.agent_email, "course": courses.get(i.course_id),
+            "contact": {"id": str(c.id), "name": contact_name(c), "phone": c.phone, "email": c.email},
+        } for i, c in rows],
     }
 
 

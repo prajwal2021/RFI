@@ -324,7 +324,7 @@ export default function ManageUsersPage() {
                           </td>
                           <td className="px-5 py-3">
                             <div className="flex flex-col gap-1 text-xs text-slate-700">
-                              <label className="flex items-center gap-1.5 cursor-pointer" title="Builds forms and reads responses. Sees only the people and hand-offs tied to their forms in the Call Center.">
+                              <label className="flex items-center gap-1.5 cursor-pointer" title="Builds forms and reads responses. In the Call Center they can read every person and call (with notes) but not log calls or change settings.">
                                 <input
                                   type="checkbox"
                                   className="h-3.5 w-3.5 accent-indigo-600"
@@ -418,7 +418,7 @@ export default function ManageUsersPage() {
                     <input type="checkbox" checked={isRfiUser} onChange={(e) => setIsRfiUser(e.target.checked)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
                     <span>
                       <b>RFI user</b>
-                      <span className="block text-xs text-slate-500">Builds forms and reads responses. In the Call Center they only see people tied to their forms and the hand-offs they send or receive.</span>
+                      <span className="block text-xs text-slate-500">Builds forms and reads responses. In the Call Center they can read every person and every call with its notes, work from the RFI Team queue and send hand-offs, but cannot log calls or change courses and settings.</span>
                     </span>
                   </label>
                   <label className="mt-2 flex items-start gap-2 text-sm text-slate-700 cursor-pointer">

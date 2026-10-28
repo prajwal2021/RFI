@@ -187,6 +187,22 @@ export const helpOf = (opts: Opt[] | undefined, v: string | null | undefined) =>
 
 export const listContacts = (p: Record<string, string | number>) =>
   req<{ total: number; rows: Contact[] }>(`/contacts?${new URLSearchParams(Object.entries(p).map(([k, v]) => [k, String(v)])).toString()}`);
+export interface Call {
+  id: string;
+  at: string;
+  channel: string;
+  direction: string;
+  outcome: string | null;
+  reason: string | null;
+  subject: string;
+  notes: string;
+  duration_minutes: number | null;
+  agent: string | null;
+  course: string | null;
+  contact: { id: string; name: string; phone: string | null; email: string | null };
+}
+export const listCalls = (p: Record<string, string | number>) =>
+  req<{ agents: string[]; rows: Call[] }>(`/calls?${new URLSearchParams(Object.entries(p).map(([k, v]) => [k, String(v)])).toString()}`);
 export const getContact = (id: string) => req<Contact360>(`/contacts/${id}`, {}, "Contact not found");
 export const getContactSummary = (id: string) =>
   req<{ contact: Contact; calls: number; open_work: number; last_interaction: { at: string; channel: string; outcome: string | null; agent: string | null } | null }>(`/contacts/${id}/summary`);
