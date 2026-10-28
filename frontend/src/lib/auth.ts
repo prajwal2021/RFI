@@ -96,6 +96,8 @@ export interface OrgUser {
   id: string;
   email: string;
   is_admin: boolean;
+  is_rfi_user?: boolean;
+  is_call_center_user?: boolean;
   org_id: string | null;
 }
 
@@ -136,14 +138,25 @@ export async function deleteOrg(id: string): Promise<void> {
   return orgJson(await apiFetch(`${API}/orgs/${id}`, { method: "DELETE" }), "Failed to delete organisation");
 }
 
-export async function addOrgUser(orgId: string, email: string, password: string, admin: boolean): Promise<OrgUser> {
+export async function addOrgUser(
+  orgId: string, email: string, password: string, admin: boolean, rfiUser = true, callCenterUser = false
+): Promise<OrgUser> {
   return orgJson(
     await apiFetch(`${API}/orgs/${orgId}/users`, {
       method: "POST",
       headers: jsonHeaders,
-      body: JSON.stringify({ email, password, is_admin: admin }),
+      body: JSON.stringify({ email, password, is_admin: admin, is_rfi_user: rfiUser, is_call_center_user: callCenterUser }),
     }),
     "Failed to add user"
+  );
+}
+
+export async function changeUserAccess(
+  orgId: string, userId: string, data: { is_rfi_user?: boolean; is_call_center_user?: boolean; is_admin?: boolean }
+): Promise<OrgUser> {
+  return orgJson(
+    await apiFetch(`${API}/orgs/${orgId}/users/${userId}/access`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify(data) }),
+    "Failed to change access"
   );
 }
 

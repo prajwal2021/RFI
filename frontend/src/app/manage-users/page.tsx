@@ -10,7 +10,7 @@ import AppHeader from "@/components/app-header";
 import UserTree from "@/components/user-tree";
 import {
   Organisation, OrgUser, addOrgUser, createOrg, deleteOrg, fetchOrgs, fetchUnassignedUsers, isAdmin, removeOrgUser, renameOrg,
-  resetOrgUserPassword,
+  resetOrgUserPassword, changeUserAccess,
 } from "@/lib/auth";
 
 const input =
@@ -34,6 +34,8 @@ export default function ManageUsersPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [makeAdmin, setMakeAdmin] = useState(false);
+  const [isRfiUser, setIsRfiUser] = useState(true);
+  const [isCcUser, setIsCcUser] = useState(false);
   const [resetFor, setResetFor] = useState<string | null>(null);
   const [resetValue, setResetValue] = useState("");
 
@@ -270,6 +272,7 @@ export default function ManageUsersPage() {
                       <tr className="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
                         <th className="px-5 py-2.5 font-medium">User</th>
                         <th className="px-5 py-2.5 font-medium">Role</th>
+                        <th className="px-5 py-2.5 font-medium">Access</th>
                         <th className="px-5 py-2.5" />
                       </tr>
                     </thead>
@@ -319,6 +322,28 @@ export default function ManageUsersPage() {
                             )}
                           </td>
                           <td className="px-5 py-3">
+                            <div className="flex flex-col gap-1 text-xs text-slate-700">
+                              <label className="flex items-center gap-1.5 cursor-pointer" title="Builds forms and reads responses. Sees only the people and hand-offs tied to their forms in the Call Center.">
+                                <input
+                                  type="checkbox"
+                                  className="h-3.5 w-3.5 accent-indigo-600"
+                                  checked={u.is_rfi_user !== false}
+                                  onChange={(e) => run(async () => { await changeUserAccess(org.id, u.id, { is_rfi_user: e.target.checked }); await load(); })}
+                                />
+                                RFI user
+                              </label>
+                              <label className="flex items-center gap-1.5 cursor-pointer" title="Works the whole Call Center. Can read RFI responses but not change forms.">
+                                <input
+                                  type="checkbox"
+                                  className="h-3.5 w-3.5 accent-indigo-600"
+                                  checked={u.is_call_center_user !== false}
+                                  onChange={(e) => run(async () => { await changeUserAccess(org.id, u.id, { is_call_center_user: e.target.checked }); await load(); })}
+                                />
+                                Call Center user
+                              </label>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3">
                             <div className="flex items-center justify-end gap-1">
                               <button
                                 onClick={() => {
@@ -352,7 +377,10 @@ export default function ManageUsersPage() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   run(async () => {
-                    await addOrgUser(org.id, email.trim(), password, makeAdmin);
+                    if (!isRfiUser && !isCcUser) throw new Error("Choose at least one: RFI user or Call Center user");
+                    await addOrgUser(org.id, email.trim(), password, makeAdmin, isRfiUser, isCcUser);
+                    setIsRfiUser(true);
+                    setIsCcUser(false);
                     setEmail("");
                     setPassword("");
                     setMakeAdmin(false);
@@ -383,6 +411,23 @@ export default function ManageUsersPage() {
                     />
                   </div>
                 </div>
+                <fieldset className="mt-4 rounded-lg border border-slate-200 p-3">
+                  <legend className="px-1 text-xs font-medium text-slate-600">What will this person do? (tick one or both)</legend>
+                  <label className="flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
+                    <input type="checkbox" checked={isRfiUser} onChange={(e) => setIsRfiUser(e.target.checked)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
+                    <span>
+                      <b>RFI user</b>
+                      <span className="block text-xs text-slate-500">Builds forms and reads responses. In the Call Center they only see people tied to their forms and the hand-offs they send or receive.</span>
+                    </span>
+                  </label>
+                  <label className="mt-2 flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
+                    <input type="checkbox" checked={isCcUser} onChange={(e) => setIsCcUser(e.target.checked)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
+                    <span>
+                      <b>Call Center user</b>
+                      <span className="block text-xs text-slate-500">Works the whole Call Center: contacts, calls, all queues, team board. Can read RFI responses but cannot change, publish or delete forms.</span>
+                    </span>
+                  </label>
+                </fieldset>
                 <div className="mt-4 flex items-center justify-between">
                   <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
                     <input type="checkbox" checked={makeAdmin} onChange={(e) => setMakeAdmin(e.target.checked)} className="h-4 w-4 accent-indigo-600" />

@@ -10,7 +10,7 @@ from app.audit import record
 from app.crm_logic import link_submission
 from app.crm_models import RFIInvitation
 from app.access import get_accessible_rfi, get_accessible_workspace, rfi_visible_clause
-from app.auth import require_user
+from app.auth import require_form_editor, require_user
 from app.database import get_db
 from app.models import RFI, RFIResponse, RFISubmission, RFIStatus, SubmissionEvent, User, Workspace, generate_publish_key
 from app.schemas import (
@@ -132,7 +132,7 @@ async def list_rfis(
 
 
 @router.post("/", response_model=RFIOut, status_code=201)
-async def create_rfi(rfi_in: RFICreate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def create_rfi(rfi_in: RFICreate, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)):
     if rfi_in.workspace_id:
         await get_accessible_workspace(db, user, rfi_in.workspace_id)
     data = rfi_in.model_dump(exclude={"created_by"})
@@ -152,7 +152,7 @@ async def get_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSes
 
 @router.patch("/{rfi_id}", response_model=RFIOut)
 async def update_rfi(
-    rfi_id: UUID, rfi_in: RFIUpdate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+    rfi_id: UUID, rfi_in: RFIUpdate, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)
 ):
     rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
     changes = rfi_in.model_dump(exclude_unset=True)
@@ -170,7 +170,7 @@ async def update_rfi(
 
 @router.post("/{rfi_id}/move", response_model=RFIOut)
 async def move_rfi(
-    rfi_id: UUID, body: RFIMove, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+    rfi_id: UUID, body: RFIMove, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)
 ):
     """Move a form to another workspace (or to 'unfiled' with workspace_id = null)."""
     rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
@@ -200,7 +200,7 @@ async def move_rfi(
 
 
 @router.delete("/{rfi_id}", status_code=204)
-async def delete_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def delete_rfi(rfi_id: UUID, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)):
     rfi = await get_accessible_rfi(db, user, rfi_id)
     record(db, user, "form_deleted", "rfi", rfi.id, rfi.subject)
     await db.delete(rfi)
@@ -208,7 +208,7 @@ async def delete_rfi(rfi_id: UUID, user: User = Depends(require_user), db: Async
 
 
 @router.post("/{rfi_id}/publish", response_model=RFIPublishResult)
-async def publish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def publish_rfi(rfi_id: UUID, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)):
     rfi = await get_accessible_rfi(db, user, rfi_id)
     if not rfi.content:
         raise HTTPException(status_code=400, detail="Cannot publish an RFI without content")
@@ -225,7 +225,7 @@ async def publish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: Asyn
 
 
 @router.post("/{rfi_id}/unpublish", response_model=RFIOut)
-async def unpublish_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def unpublish_rfi(rfi_id: UUID, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)):
     rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True)
     rfi.is_published = False
     record(db, user, "form_unpublished", "rfi", rfi.id, rfi.subject)
@@ -248,7 +248,7 @@ async def get_submissions(rfi_id: UUID, user: User = Depends(require_user), db: 
 
 @router.post("/{rfi_id}/responses", response_model=RFIResponseOut, status_code=201)
 async def add_response(
-    rfi_id: UUID, resp_in: RFIResponseCreate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+    rfi_id: UUID, resp_in: RFIResponseCreate, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)
 ):
     rfi = await get_accessible_rfi(db, user, rfi_id)
     response = RFIResponse(rfi_id=rfi_id, **resp_in.model_dump())

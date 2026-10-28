@@ -23,6 +23,9 @@ function UserCard({ u, onClick }: { u: OrgUser; onClick?: () => void }) {
         <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${u.is_admin ? "text-amber-700" : "text-slate-500"}`}>
           {u.is_admin ? <Shield className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
           {u.is_admin ? "Admin" : "Member"}
+          <span className="text-slate-400 font-normal">
+            · {[u.is_rfi_user !== false ? "RFI" : "", u.is_call_center_user !== false ? "Call Center" : ""].filter(Boolean).join(" + ")}
+          </span>
         </span>
       </span>
     </button>

@@ -92,6 +92,8 @@ export interface Me {
   is_admin: boolean;
   org_id: string | null;
   org_name: string | null;
+  is_rfi_user?: boolean;
+  is_call_center_user?: boolean;
 }
 
 export async function fetchMe(): Promise<Me> {

@@ -11,7 +11,7 @@ from app.audit import record
 from app.auth import hash_password, require_admin
 from app.database import get_db
 from app.models import Organisation, User
-from app.schemas import AdminResetPasswordIn, OrgCreate, OrgOut, OrgUserCreate, UserOut
+from app.schemas import AdminResetPasswordIn, OrgCreate, OrgOut, OrgUserCreate, UserAccessPatch, UserOut
 
 router = APIRouter(prefix="/api/orgs", tags=["organisations"], dependencies=[Depends(require_admin)])
 
@@ -100,16 +100,20 @@ async def add_user(
         raise HTTPException(status_code=400, detail="Enter a valid email address")
     if len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if not (body.is_rfi_user or body.is_call_center_user):
+        raise HTTPException(status_code=400, detail="Choose at least one: RFI user or Call Center user")
     user = User(
         email=email,
         password_hash=await hash_password(body.password),
         is_admin=body.is_admin,
+        is_rfi_user=body.is_rfi_user,
+        is_call_center_user=body.is_call_center_user,
         org_id=org_id,
     )
     db.add(user)
     try:
         await db.flush()
-        record(db, admin, "user_added", "user", user.id, user.email, {"org": org.name, "is_admin": user.is_admin})
+        record(db, admin, "user_added", "user", user.id, user.email, {"org": org.name, "is_admin": user.is_admin, "rfi_user": user.is_rfi_user, "call_center_user": user.is_call_center_user})
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -124,6 +128,35 @@ async def _member(db: AsyncSession, org_id: UUID, user_id: UUID) -> User:
     ).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found in this organisation")
+    return user
+
+
+@router.patch("/{org_id}/users/{user_id}/access", response_model=UserOut)
+async def change_user_access(
+    org_id: UUID,
+    user_id: UUID,
+    body: UserAccessPatch,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await _member(db, org_id, user_id)
+    rfi = user.is_rfi_user if body.is_rfi_user is None else body.is_rfi_user
+    cc = user.is_call_center_user if body.is_call_center_user is None else body.is_call_center_user
+    if not (rfi or cc):
+        raise HTTPException(status_code=400, detail="Choose at least one: RFI user or Call Center user")
+    if body.is_admin is not None and body.is_admin != user.is_admin:
+        if user.id == admin.id and not body.is_admin:
+            raise HTTPException(status_code=400, detail="You cannot remove your own admin access")
+        if not body.is_admin:
+            admins = (await db.execute(select(func.count(User.id)).where(User.is_admin.is_(True)))).scalar_one()
+            if admins <= 1:
+                raise HTTPException(status_code=400, detail="Cannot remove the last admin")
+        user.is_admin = body.is_admin
+    user.is_rfi_user = rfi
+    user.is_call_center_user = cc
+    record(db, admin, "user_access_changed", "user", user.id, user.email, {"rfi_user": rfi, "call_center_user": cc, "is_admin": user.is_admin})
+    await db.commit()
+    await db.refresh(user)
     return user
 
 

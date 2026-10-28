@@ -7,12 +7,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, delete, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access import get_accessible_rfi, rfi_visible_clause
 from app.audit import record
-from app.auth import require_user
+from app.auth import is_rfi_only, require_call_center_staff, require_user
 from app.crm_logic import (
     JOURNEY_HELP, JOURNEY_LABELS, add_event, contact_name, contact_visible_clause, find_contact, journeys, next_work_number,
     norm_email, norm_phone, response_qa, sync_points,
@@ -50,8 +50,22 @@ async def _users(db: AsyncSession, ids) -> dict:
     return {u.id: u.email for u in (await db.execute(select(User).where(User.id.in_(ids)))).scalars().all()}
 
 
+def _contact_scope(user: User):
+    """Who can this user see? Call Center users: the whole organisation. RFI-only users: just people tied to their own
+    forms (a response or a hand-off they sent or received)."""
+    base = contact_visible_clause(user)
+    if not is_rfi_only(user):
+        return base
+    visible_rfis = select(RFI.id).outerjoin(Workspace, RFI.workspace_id == Workspace.id).where(rfi_visible_clause(user))
+    return and_(base, or_(
+        exists().where(RFISubmission.contact_id == Contact.id, RFISubmission.rfi_id.in_(visible_rfis)),
+        exists().where(WorkItem.contact_id == Contact.id, or_(WorkItem.created_by_id == user.id, WorkItem.owner_id == user.id)),
+        Contact.created_by_id == user.id,
+    ))
+
+
 async def _get_contact(db: AsyncSession, user: User, cid: UUID) -> Contact:
-    c = (await db.execute(select(Contact).where(Contact.id == cid, contact_visible_clause(user)))).scalar_one_or_none()
+    c = (await db.execute(select(Contact).where(Contact.id == cid, _contact_scope(user)))).scalar_one_or_none()
     if not c:
         raise HTTPException(status_code=404, detail="Contact not found")
     return c
@@ -63,7 +77,10 @@ def _work_visible(user: User):
     clauses = [and_(WorkItem.org_id.is_(None), WorkItem.created_by_id == user.id), WorkItem.owner_id == user.id]
     if user.org_id is not None:
         clauses.append(WorkItem.org_id == user.org_id)
-    return or_(*clauses)
+    base = or_(*clauses)
+    if is_rfi_only(user):  # RFI users see the RFI team's queue and anything they sent or own
+        return and_(base, or_(WorkItem.team == "rfi", WorkItem.created_by_id == user.id, WorkItem.owner_id == user.id))
+    return base
 
 
 async def _assignable(db: AsyncSession, user: User, owner_id: UUID | None) -> User | None:
@@ -120,7 +137,8 @@ async def meta(user: User = Depends(require_user), db: AsyncSession = Depends(ge
     return {
         **as_dict(),
         "people": people,
-        "me": {"id": str(user.id), "email": user.email, "is_admin": user.is_admin},
+        "me": {"id": str(user.id), "email": user.email, "is_admin": user.is_admin, "is_rfi_user": user.is_rfi_user,
+                "is_call_center_user": user.is_call_center_user, "rfi_only": is_rfi_only(user)},
         "custom_fields": [_field_out(f) for f in fields],
         "courses": [_course_out(c) for c in courses],
     }
@@ -211,7 +229,7 @@ async def list_contacts(
     limit: int = 50, offset: int = 0, user: User = Depends(require_user), db: AsyncSession = Depends(get_db),
 ):
     """Search everyone by name, email, phone, R-number or organisation, with optional filters."""
-    query = select(Contact).where(contact_visible_clause(user))
+    query = select(Contact).where(_contact_scope(user))
     q = q.strip()
     if q:
         digits = re.sub(r"\D", "", q)
@@ -262,13 +280,13 @@ async def list_contacts(
 
 
 @router.post("/contacts", status_code=201)
-async def create_contact(body: ContactIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def create_contact(body: ContactIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     d = _clean_contact(body.model_dump(exclude={"force"}))
     if not (d["first_name"].strip() or d["last_name"].strip() or d["email"] or d["phone"]):
         raise HTTPException(status_code=400, detail="Enter at least a name, email or phone")
     if not body.force:
         dup = await find_contact(db, user.org_id, d["email"], d["phone"], d["r_number"])
-        if dup and (await db.execute(select(Contact.id).where(Contact.id == dup.id, contact_visible_clause(user)))).first():
+        if dup and (await db.execute(select(Contact.id).where(Contact.id == dup.id, _contact_scope(user)))).first():
             raise HTTPException(status_code=409, detail={"message": "This person may already exist", "contact": contact_out(dup)})
     if d.get("owner_id"):
         await _assignable(db, user, d["owner_id"])
@@ -332,7 +350,11 @@ async def contact_360(cid: UUID, user: User = Depends(require_user), db: AsyncSe
     js = await journeys(db, [c])
 
     interactions = (await db.execute(select(Interaction).where(Interaction.contact_id == c.id).order_by(Interaction.occurred_at.desc()).limit(500))).scalars().all()
-    work = (await db.execute(select(WorkItem).where(WorkItem.contact_id == c.id).order_by(WorkItem.created_at.desc()))).scalars().all()
+    strip = is_rfi_only(user)  # RFI users see that a call happened and its outcome, not the notes
+    work_q = select(WorkItem).where(WorkItem.contact_id == c.id)
+    if strip:
+        work_q = work_q.where(_work_visible(user))
+    work = (await db.execute(work_q.order_by(WorkItem.created_at.desc()))).scalars().all()
     interests = (await db.execute(select(Interest, Course).join(Course, Course.id == Interest.course_id).where(Interest.contact_id == c.id).order_by(Course.name))).all()
     rels = (await db.execute(select(ContactRelation, Contact).join(Contact, Contact.id == ContactRelation.related_id).where(ContactRelation.contact_id == c.id))).all()
     events = (await db.execute(select(ContactEvent).where(ContactEvent.contact_id == c.id).order_by(ContactEvent.created_at.desc()).limit(300))).scalars().all()
@@ -348,8 +370,9 @@ async def contact_360(cid: UUID, user: User = Depends(require_user), db: AsyncSe
     timeline: list[dict] = []
     for i in interactions:
         timeline.append({"at": i.occurred_at.isoformat(), "kind": "interaction", "actor": i.agent_email, "data": {
-            "id": str(i.id), "channel": i.channel, "direction": i.direction, "outcome": i.outcome, "reason": i.reason,
-            "subject": i.subject, "notes": i.notes, "duration_minutes": i.duration_minutes, "course": all_courses.get(i.course_id)}})
+            "id": str(i.id), "channel": i.channel, "direction": i.direction, "outcome": i.outcome,
+            "reason": None if strip else i.reason, "subject": "" if strip else i.subject, "notes": "" if strip else i.notes,
+            "duration_minutes": None if strip else i.duration_minutes, "course": None if strip else all_courses.get(i.course_id)}})
     for w in work:
         timeline.append({"at": w.created_at.isoformat(), "kind": "work_created", "actor": w.created_by_email,
                          "data": {"id": str(w.id), "number": w.number, "kind": w.kind, "team": w.team, "title": w.title, "category": w.category}})
@@ -399,7 +422,7 @@ async def contact_summary(cid: UUID, user: User = Depends(require_user), db: Asy
     js = await journeys(db, [c])
     last = (await db.execute(select(Interaction).where(Interaction.contact_id == c.id).order_by(Interaction.occurred_at.desc()).limit(1))).scalar_one_or_none()
     calls = (await db.execute(select(func.count(Interaction.id)).where(Interaction.contact_id == c.id, Interaction.channel.in_(("call", "voicemail"))))).scalar_one()
-    open_work = (await db.execute(select(func.count(WorkItem.id)).where(WorkItem.contact_id == c.id, WorkItem.status.in_(OPEN_STATUSES)))).scalar_one()
+    open_work = (await db.execute(select(func.count(WorkItem.id)).where(WorkItem.contact_id == c.id, WorkItem.status.in_(OPEN_STATUSES), _work_visible(user)))).scalar_one()
     return {
         "contact": contact_out(c, js.get(c.id)), "calls": calls, "open_work": open_work,
         "last_interaction": {"at": last.occurred_at.isoformat(), "channel": last.channel, "outcome": last.outcome, "agent": last.agent_email} if last else None,
@@ -411,7 +434,7 @@ class MergeIn(BaseModel):
 
 
 @router.post("/contacts/{cid}/merge")
-async def merge_contacts(cid: UUID, body: MergeIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def merge_contacts(cid: UUID, body: MergeIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     """Merge a duplicate (source) into this contact (target). History moves; the duplicate is removed."""
     target = await _get_contact(db, user, cid)
     source = await _get_contact(db, user, body.source_id)
@@ -458,7 +481,7 @@ class RelationIn(BaseModel):
 
 
 @router.post("/contacts/{cid}/relations", status_code=201)
-async def add_relation(cid: UUID, body: RelationIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def add_relation(cid: UUID, body: RelationIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     _check(body.relation, RELATIONS, "relationship")
     a = await _get_contact(db, user, cid)
     b = await _get_contact(db, user, body.related_id)
@@ -476,7 +499,7 @@ async def add_relation(cid: UUID, body: RelationIn, user: User = Depends(require
 
 
 @router.delete("/relations/{rid}", status_code=204)
-async def remove_relation(rid: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def remove_relation(rid: UUID, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     rel = (await db.execute(select(ContactRelation).where(ContactRelation.id == rid))).scalar_one_or_none()
     if not rel:
         raise HTTPException(status_code=404, detail="Not found")
@@ -507,7 +530,7 @@ class InteractionIn(BaseModel):
 
 
 @router.post("/contacts/{cid}/interactions", status_code=201)
-async def log_interaction(cid: UUID, body: InteractionIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def log_interaction(cid: UUID, body: InteractionIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     c = await _get_contact(db, user, cid)
     _check(body.channel, CHANNELS, "channel")
     _check(body.direction, DIRECTIONS, "direction")
@@ -555,7 +578,7 @@ async def log_interaction(cid: UUID, body: InteractionIn, user: User = Depends(r
 
 
 @router.delete("/interactions/{iid}", status_code=204)
-async def delete_interaction(iid: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def delete_interaction(iid: UUID, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     i = (await db.execute(select(Interaction).where(Interaction.id == iid))).scalar_one_or_none()
     if not i:
         raise HTTPException(status_code=404, detail="Not found")
@@ -590,7 +613,7 @@ def _bump_lifecycle(c: Contact, stage: str) -> None:
 
 
 @router.post("/contacts/{cid}/interests", status_code=201)
-async def add_interest(cid: UUID, body: InterestIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def add_interest(cid: UUID, body: InterestIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     _check(body.stage, INTEREST_STAGES, "stage")
     c = await _get_contact(db, user, cid)
     course = (await db.execute(select(Course).where(Course.id == body.course_id))).scalar_one_or_none()
@@ -607,7 +630,7 @@ async def add_interest(cid: UUID, body: InterestIn, user: User = Depends(require
 
 
 @router.patch("/interests/{iid}")
-async def update_interest(iid: UUID, body: InterestPatch, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def update_interest(iid: UUID, body: InterestPatch, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     it = (await db.execute(select(Interest).where(Interest.id == iid))).scalar_one_or_none()
     if not it:
         raise HTTPException(status_code=404, detail="Not found")
@@ -628,7 +651,7 @@ async def update_interest(iid: UUID, body: InterestPatch, user: User = Depends(r
 
 
 @router.delete("/interests/{iid}", status_code=204)
-async def delete_interest(iid: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def delete_interest(iid: UUID, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     it = (await db.execute(select(Interest).where(Interest.id == iid))).scalar_one_or_none()
     if not it:
         raise HTTPException(status_code=404, detail="Not found")
@@ -656,7 +679,7 @@ async def sendable_rfis(user: User = Depends(require_user), db: AsyncSession = D
 
 
 @router.post("/contacts/{cid}/invitations", status_code=201)
-async def create_invitation(cid: UUID, body: InviteIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def create_invitation(cid: UUID, body: InviteIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     c = await _get_contact(db, user, cid)
     if c.do_not_contact:
         raise HTTPException(status_code=409, detail="This person asked not to be contacted.")
@@ -913,7 +936,7 @@ async def home(user: User = Depends(require_user), db: AsyncSession = Depends(ge
         "queue_rfi": (await db.execute(count(vis, WorkItem.owner_id.is_(None), WorkItem.team == "rfi", WorkItem.status.in_(OPEN_STATUSES)))).scalar_one(),
         "my_calls_today": (await db.execute(select(func.count(Interaction.id)).where(Interaction.agent_id == user.id, Interaction.occurred_at >= today_start, Interaction.channel.in_(("call", "voicemail"))))).scalar_one(),
     }
-    contacts = (await db.execute(select(Contact).where(contact_visible_clause(user)).order_by(Contact.updated_at.desc()).limit(3000))).scalars().all()
+    contacts = (await db.execute(select(Contact).where(_contact_scope(user)).order_by(Contact.updated_at.desc()).limit(3000))).scalars().all()
     js = await journeys(db, contacts)
     counts: dict[str, int] = {}
     for v in js.values():
@@ -928,7 +951,7 @@ async def home(user: User = Depends(require_user), db: AsyncSession = Depends(ge
 
 
 @router.get("/team")
-async def team_board(user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def team_board(user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     """Who is working on what: open, overdue, due today and closed this week per person, plus queue depth per team."""
     q = select(User).order_by(User.email)
     if not user.is_admin:
@@ -998,7 +1021,7 @@ async def list_courses(user: User = Depends(require_user), db: AsyncSession = De
 
 
 @router.post("/courses", status_code=201)
-async def create_course(body: CourseIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def create_course(body: CourseIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     _check(body.status, COURSE_STATUSES, "course status")
     if (await db.execute(select(Course).where(func.lower(Course.name) == body.name.strip().lower()))).scalar_one_or_none():
         raise HTTPException(status_code=409, detail="A course with that name already exists")
@@ -1010,7 +1033,7 @@ async def create_course(body: CourseIn, user: User = Depends(require_user), db: 
 
 
 @router.patch("/courses/{course_id}")
-async def update_course(course_id: UUID, body: CourseIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def update_course(course_id: UUID, body: CourseIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     _check(body.status, COURSE_STATUSES, "course status")
     c = (await db.execute(select(Course).where(Course.id == course_id))).scalar_one_or_none()
     if not c:
@@ -1038,7 +1061,7 @@ async def update_course(course_id: UUID, body: CourseIn, user: User = Depends(re
 
 
 @router.delete("/courses/{course_id}", status_code=204)
-async def delete_course(course_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def delete_course(course_id: UUID, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Only admins can delete courses. Mark it Closed instead.")
     c = (await db.execute(select(Course).where(Course.id == course_id))).scalar_one_or_none()
@@ -1065,7 +1088,7 @@ class FieldIn(BaseModel):
 
 
 @router.post("/custom-fields", status_code=201)
-async def create_field(body: FieldIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def create_field(body: FieldIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     _check(body.field_type, CUSTOM_FIELD_TYPES, "field type")
     key = re.sub(r"[^a-z0-9]+", "_", body.label.lower()).strip("_")[:60] or "field"
     base, n = key, 2
@@ -1082,7 +1105,7 @@ async def create_field(body: FieldIn, user: User = Depends(require_user), db: As
 
 
 @router.patch("/custom-fields/{fid}")
-async def update_field(fid: UUID, body: FieldIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def update_field(fid: UUID, body: FieldIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     f = (await db.execute(select(CustomFieldDef).where(CustomFieldDef.id == fid))).scalar_one_or_none()
     if not f:
         raise HTTPException(status_code=404, detail="Field not found")
@@ -1094,7 +1117,7 @@ async def update_field(fid: UUID, body: FieldIn, user: User = Depends(require_us
 
 
 @router.delete("/custom-fields/{fid}", status_code=204)
-async def delete_field(fid: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def delete_field(fid: UUID, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Only admins can delete custom fields")
     f = (await db.execute(select(CustomFieldDef).where(CustomFieldDef.id == fid))).scalar_one_or_none()

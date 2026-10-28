@@ -54,7 +54,10 @@ async def me(user: User = Depends(require_user), db: AsyncSession = Depends(get_
     org_name = None
     if user.org_id:
         org_name = (await db.execute(select(Organisation.name).where(Organisation.id == user.org_id))).scalar_one_or_none()
-    return MeOut(id=user.id, email=user.email, is_admin=user.is_admin, org_id=user.org_id, org_name=org_name)
+    return MeOut(
+        id=user.id, email=user.email, is_admin=user.is_admin, org_id=user.org_id, org_name=org_name,
+        is_rfi_user=user.is_rfi_user, is_call_center_user=user.is_call_center_user,
+    )
 
 
 @router.post("/change-password", status_code=204)

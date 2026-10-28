@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardCheck, Headset } from "lucide-react";
 import ProfileMenu from "@/components/profile-menu";
 import NewFormMenu from "@/components/new-form-menu";
+import { useAccess } from "@/lib/access";
 
 export function BrandMark({ onClick }: { onClick?: () => void }) {
   return (
@@ -35,6 +36,7 @@ export default function AppHeader({
   left?: React.ReactNode;
 }) {
   const router = useRouter();
+  const { canEditForms } = useAccess();
   return (
     <header className="bg-white border-b border-slate-200 shrink-0">
       <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
@@ -47,7 +49,7 @@ export default function AppHeader({
           <a href="/rfi/crm" className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100" title="Open the Call Center">
             <Headset className="h-4 w-4" /> Call Center
           </a>
-          <NewFormMenu workspaceId={workspaceId} />
+          {canEditForms && <NewFormMenu workspaceId={workspaceId} />}
           <ProfileMenu />
         </div>
       </div>

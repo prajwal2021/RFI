@@ -427,6 +427,7 @@ export default function ContactPage() {
       setError(e instanceof Error ? e.message : "Something went wrong");
     }
   };
+  const rfiOnly = !!meta.me.rfi_only;
   const work = (preset: WorkPreset) => setWorkPreset({ contact_id: c.id, contact_name: c.name, ...preset });
   const openItems = data.work_items.filter((w) => !["done", "cancelled"].includes(w.status));
   const closedItems = data.work_items.filter((w) => ["done", "cancelled"].includes(w.status));
@@ -457,15 +458,21 @@ export default function ContactPage() {
             </h1>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            <button onClick={() => document.getElementById("log-activity")?.scrollIntoView({ behavior: "smooth" })} className={btn.brand}><PhoneCall className="h-3.5 w-3.5" /> Log a Call</button>
+            {!rfiOnly && <button onClick={() => document.getElementById("log-activity")?.scrollIntoView({ behavior: "smooth" })} className={btn.brand}><PhoneCall className="h-3.5 w-3.5" /> Log a Call</button>}
             <button onClick={() => work({ kind: "task" })} className={btn.neutral}><ListTodo className="h-3.5 w-3.5" /> New Task</button>
-            <button onClick={() => work({ kind: "callback", title: `Call back ${c.name}` })} className={btn.neutral}><CalendarClock className="h-3.5 w-3.5" /> Callback</button>
-            <button onClick={() => work({ kind: "case" })} className={btn.neutral}><Briefcase className="h-3.5 w-3.5" /> New Case</button>
-            <button onClick={() => work({ kind: "handoff", team: "rfi", category: "send_rfi", title: `RFI team: ${c.name}` })} className={btn.neutral} title="Pass this person to the RFI team with a reason and notes">
-              <Share2 className="h-3.5 w-3.5" /> Send to RFI Team
-            </button>
+            {!rfiOnly && <button onClick={() => work({ kind: "callback", title: `Call back ${c.name}` })} className={btn.neutral}><CalendarClock className="h-3.5 w-3.5" /> Callback</button>}
+            {!rfiOnly && <button onClick={() => work({ kind: "case" })} className={btn.neutral}><Briefcase className="h-3.5 w-3.5" /> New Case</button>}
+            {rfiOnly ? (
+              <button onClick={() => work({ kind: "handoff", team: "call_center", category: "call_request", title: `Please call ${c.name}` })} className={btn.brand} title="Ask the Call Center to phone this person">
+                <Share2 className="h-3.5 w-3.5" /> Send to Call Center
+              </button>
+            ) : (
+              <button onClick={() => work({ kind: "handoff", team: "rfi", category: "send_rfi", title: `RFI team: ${c.name}` })} className={btn.neutral} title="Pass this person to the RFI team with a reason and notes">
+                <Share2 className="h-3.5 w-3.5" /> Send to RFI Team
+              </button>
+            )}
             <button onClick={() => setDialog("edit")} className={btn.neutral}><Pencil className="h-3.5 w-3.5" /> Edit</button>
-            <button onClick={() => setDialog("merge")} className={btn.icon} title="Merge a duplicate into this record"><GitMerge className="h-4 w-4" /></button>
+            {!rfiOnly && <button onClick={() => setDialog("merge")} className={btn.icon} title="Merge a duplicate into this record"><GitMerge className="h-4 w-4" /></button>}
             {meta.me.is_admin && (
               <button onClick={async () => { if (!confirm(`Delete ${c.name} and all their history? This cannot be undone.`)) return; try { await deleteContact(c.id); router.push("/crm/contacts"); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); } }} className={btn.icon} title="Delete contact (admin)">
                 <Trash2 className="h-4 w-4 text-[#ba0517]" />
@@ -518,7 +525,7 @@ export default function ContactPage() {
 
           <Card title="Relationships" icon={<Users className="h-4 w-4" />} iconColor="#06a59a"
             help="Parents, students, employer contacts. A call logged 'on behalf of' someone shows on both records."
-            actions={<button onClick={() => setDialog("relation")} className={btn.neutral}>Add</button>}>
+            actions={rfiOnly ? undefined : <button onClick={() => setDialog("relation")} className={btn.neutral}>Add</button>}>
             {data.relations.length === 0 ? <p className="text-[13px] text-[#747474]">No linked people.</p> : (
               <ul className="space-y-1.5">
                 {data.relations.map((r) => (
@@ -535,7 +542,7 @@ export default function ContactPage() {
 
         {/* Middle: activity */}
         <div className="space-y-3 min-w-0">
-          <div id="log-activity"><LogActivity meta={meta} data={data} onSaved={() => done("Activity logged")} /></div>
+          {!rfiOnly && <div id="log-activity"><LogActivity meta={meta} data={data} onSaved={() => done("Activity logged")} /></div>}
           <Timeline meta={meta} data={data} />
         </div>
 
@@ -543,7 +550,7 @@ export default function ContactPage() {
         <div className="space-y-3 xl:col-span-1 lg:col-span-2 min-w-0">
           <Card title="Course interests" icon={<BookOpen className="h-4 w-4" />} iconColor="#dd7a01"
             help="Each course this person is interested in, moving along the path from Inquiry to Enrolled. Click a stage to move it."
-            actions={<button onClick={() => setDialog("interest")} className={btn.neutral}>Add</button>}>
+            actions={rfiOnly ? undefined : <button onClick={() => setDialog("interest")} className={btn.neutral}>Add</button>}>
             {data.interests.length === 0 ? <p className="text-[13px] text-[#747474]">No course interests yet. They are added automatically when you log a call about a course or they pick courses in an RFI.</p> : (
               <ul className="space-y-3">
                 {data.interests.map((it) => (

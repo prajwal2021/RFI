@@ -7,6 +7,9 @@ import { ClipboardCheck, Grid3x3, Headset, Phone, Search, UserPlus } from "lucid
 import ProfileMenu from "@/components/profile-menu";
 import { Contact, listContacts } from "@/lib/crm";
 import { JourneyBadge } from "@/components/crm/ui";
+import { useAccess } from "@/lib/access";
+
+const RFI_USER_HIDDEN = ["/crm/team", "/crm/courses", "/crm/settings"];
 
 const TABS = [
   { href: "/crm", label: "Home" },
@@ -106,6 +109,12 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const router = useRouter();
   const active = (href: string) => (href === "/crm" ? pathname === "/crm" : pathname.startsWith(href));
+  const { rfiOnly } = useAccess();
+  const tabs = rfiOnly ? TABS.filter((t) => !RFI_USER_HIDDEN.includes(t.href)) : TABS;
+
+  useEffect(() => {
+    if (rfiOnly && RFI_USER_HIDDEN.some((h) => pathname.startsWith(h))) router.replace("/crm");
+  }, [rfiOnly, pathname, router]);
 
   return (
     <div className="min-h-screen bg-[#f3f3f3] text-[#181818]">
@@ -119,9 +128,9 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
           <div className="flex-1 flex justify-center min-w-0">
             <GlobalSearch />
           </div>
-          <button onClick={() => router.push("/crm/contacts?new=1")} className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded border border-[#c9c9c9] text-[13px] text-[#0176d3] hover:bg-[#f3f3f3]" title="New contact">
+          {!rfiOnly && <button onClick={() => router.push("/crm/contacts?new=1")} className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded border border-[#c9c9c9] text-[13px] text-[#0176d3] hover:bg-[#f3f3f3]" title="New contact">
             <UserPlus className="h-4 w-4" /> New
-          </button>
+          </button>}
           <Link href="/" className="hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded text-[13px] text-[#444] hover:bg-[#f3f3f3]" title="Switch to RFI Forms">
             <Grid3x3 className="h-4 w-4" /> RFI Forms
           </Link>
@@ -131,7 +140,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
           <span className="flex items-center gap-1.5 pr-4 mr-1 border-r border-[#e5e5e5] text-[15px] font-semibold text-[#181818] whitespace-nowrap">
             <Phone className="h-4 w-4 text-[#0176d3]" /> Call Center
           </span>
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <Link
               key={t.href}
               href={t.href}
@@ -146,6 +155,13 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
           </Link>
         </nav>
       </header>
+      {rfiOnly && (
+        <div className="px-3 sm:px-4 pt-3">
+          <div className="rounded border border-[#c9dff5] bg-[#f3f9ff] px-3 py-2 text-[12px] text-[#014486]">
+            <b>RFI user view.</b> You see the people who responded to your forms and the hand-offs you send or receive. Use <b>Send to Call Center</b> on a person to ask for a call.
+          </div>
+        </div>
+      )}
       <main className="p-3 sm:p-4">{children}</main>
     </div>
   );

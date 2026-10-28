@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.access import get_accessible_workspace, workspace_visible_clause
 from app.audit import record
-from app.auth import require_user
+from app.auth import require_form_editor, require_user
 from app.database import get_db
 from app.models import Workspace, RFI, User
 from app.schemas import WorkspaceCreate, WorkspaceUpdate, WorkspaceOut, RFIOut
@@ -52,7 +52,7 @@ async def list_workspaces(user: User = Depends(require_user), db: AsyncSession =
 
 @router.post("/", response_model=WorkspaceOut, status_code=201)
 async def create_workspace(
-    ws_in: WorkspaceCreate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+    ws_in: WorkspaceCreate, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)
 ):
     name = ws_in.name.strip()
     if not name:
@@ -81,7 +81,7 @@ async def get_workspace(ws_id: UUID, user: User = Depends(require_user), db: Asy
 
 @router.patch("/{ws_id}", response_model=WorkspaceOut)
 async def update_workspace(
-    ws_id: UUID, ws_in: WorkspaceUpdate, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)
+    ws_id: UUID, ws_in: WorkspaceUpdate, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)
 ):
     ws = await get_accessible_workspace(db, user, ws_id)
     if ws.owner_id != user.id and not user.is_admin:
@@ -95,7 +95,7 @@ async def update_workspace(
 
 
 @router.delete("/{ws_id}", status_code=204)
-async def delete_workspace(ws_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+async def delete_workspace(ws_id: UUID, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)):
     ws = await get_accessible_workspace(db, user, ws_id)
     if ws.owner_id != user.id and not user.is_admin:
         raise HTTPException(status_code=403, detail="Only the workspace owner can delete it")

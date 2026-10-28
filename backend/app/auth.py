@@ -94,3 +94,29 @@ async def seed_admin(db: AsyncSession) -> None:
         return
     db.add(User(email=email, is_admin=True, password_hash=await hash_password(settings.ADMIN_PASSWORD)))
     await db.commit()
+
+
+# ── Access types ──
+# RFI user: builds forms and reads responses; sees only a trimmed Call Center (people from their forms, hand-offs).
+# Call Center user: full Call Center; reads RFI responses but cannot build, publish, move or delete forms.
+# A person can be both. Admins can do everything.
+
+
+def is_rfi_only(user: User) -> bool:
+    return not user.is_admin and bool(user.is_rfi_user) and not user.is_call_center_user
+
+
+def is_call_center_only(user: User) -> bool:
+    return not user.is_admin and bool(user.is_call_center_user) and not user.is_rfi_user
+
+
+async def require_form_editor(user: User = Depends(require_user)) -> User:
+    if is_call_center_only(user):
+        raise HTTPException(status_code=403, detail="Your account is a Call Center user: you can read RFI responses but not change forms.")
+    return user
+
+
+async def require_call_center_staff(user: User = Depends(require_user)) -> User:
+    if is_rfi_only(user):
+        raise HTTPException(status_code=403, detail="This is a Call Center action. Your account is an RFI user.")
+    return user

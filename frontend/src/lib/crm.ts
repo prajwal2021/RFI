@@ -53,7 +53,7 @@ export interface Meta {
   custom_field_types: Opt[];
   journey: Opt[];
   people: { id: string; email: string }[];
-  me: { id: string; email: string; is_admin: boolean };
+  me: { id: string; email: string; is_admin: boolean; is_rfi_user?: boolean; is_call_center_user?: boolean; rfi_only?: boolean };
   custom_fields: CustomField[];
   courses: Course[];
 }

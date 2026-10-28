@@ -147,6 +147,7 @@ export default function DashboardPage() {
   );
 
   const hasOrg = !!me?.org_id;
+  const canEdit = !me || me.is_admin || me.is_rfi_user !== false;
 
   function openForms(published: boolean) {
     setFilterStatus("");
@@ -245,7 +246,7 @@ export default function DashboardPage() {
                       </div>
                     </CardContent>
                   </Card>
-                ) : (
+                ) : !canEdit ? null : (
                   <Card
                     className="cursor-pointer hover:shadow-md transition-shadow border-2 border-dashed border-gray-300 hover:border-blue-400"
                     onClick={() => setShowNewWs(true)}
@@ -299,7 +300,7 @@ export default function DashboardPage() {
                               <><Lock className="h-3 w-3 mr-1" /> Private</>
                             )}
                           </Badge>
-                          {(ws.is_owner || me?.is_admin) && (
+                          {canEdit && (ws.is_owner || me?.is_admin) && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -434,7 +435,7 @@ export default function DashboardPage() {
                                     <Copy className="h-4 w-4 text-green-600" />
                                   )}
                                 </Button>
-                              ) : rfi.content ? (
+                              ) : rfi.content && canEdit ? (
                                 <Button variant="ghost" size="icon" title="Publish" onClick={() => handleQuickPublish(rfi)}>
                                   <Globe className="h-4 w-4 text-gray-400" />
                                 </Button>
@@ -442,14 +443,16 @@ export default function DashboardPage() {
                               <Button variant="ghost" size="icon" title="View" onClick={() => router.push(`/rfi/${rfi.id}`)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {editPath && (
+                              {editPath && canEdit && (
                                 <Button variant="ghost" size="icon" title="Edit" onClick={() => router.push(editPath)}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               )}
-                              <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(rfi.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              {canEdit && (
+                                <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(rfi.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );

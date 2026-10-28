@@ -143,6 +143,8 @@ class UserOut(BaseModel):
     id: UUID
     email: str
     is_admin: bool = False
+    is_rfi_user: bool = True
+    is_call_center_user: bool = True
     org_id: UUID | None = None
 
     model_config = {"from_attributes": True}
@@ -160,6 +162,14 @@ class OrgUserCreate(BaseModel):
     email: str
     password: str
     is_admin: bool = False
+    is_rfi_user: bool = True
+    is_call_center_user: bool = True
+
+
+class UserAccessPatch(BaseModel):
+    is_rfi_user: bool | None = None
+    is_call_center_user: bool | None = None
+    is_admin: bool | None = None
 
 
 class AdminResetPasswordIn(BaseModel):

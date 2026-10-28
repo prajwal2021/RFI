@@ -29,6 +29,8 @@ MIGRATIONS = [
     "CREATE INDEX IF NOT EXISTS ix_rfi_submissions_contact_id ON rfi_submissions (contact_id)",
     "CREATE SEQUENCE IF NOT EXISTS crm_work_item_seq START 1001",
     "ALTER TABLE crm_work_items ADD COLUMN IF NOT EXISTS shared_response JSONB",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_rfi_user BOOLEAN NOT NULL DEFAULT TRUE",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_call_center_user BOOLEAN NOT NULL DEFAULT TRUE",
 ]
 
 

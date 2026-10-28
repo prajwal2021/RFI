@@ -127,6 +127,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
+    # Access type: RFI user (forms + responses) and/or Call Center user (full Call Center). Existing users keep both.
+    is_rfi_user: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    is_call_center_user: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     org_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("organisations.id", ondelete="SET NULL"), nullable=True
     )

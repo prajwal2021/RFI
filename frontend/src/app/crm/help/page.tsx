@@ -34,6 +34,7 @@ const ITEMS: [string, string][] = [
   ["Consent & Do not contact", "What the person agreed to (call / email / SMS). Do not contact blocks all outbound outreach."],
   ["Merge", "Combines a duplicate record into this one. History moves over; the duplicate is removed."],
   ["Custom field", "An extra field your team adds to every contact in Setup, e.g. Employer ID."],
+  ["Access types", "Set by an admin when creating a user. RFI user: builds forms and reads responses, and in the Call Center sees only people tied to their forms and the hand-offs they send or receive (call outcomes, not call notes). Call Center user: the whole Call Center, plus read-only RFI responses. A person can be both."],
   ["Record owner", "The person responsible for a contact. The first agent to log activity becomes owner automatically."],
 ];
 
