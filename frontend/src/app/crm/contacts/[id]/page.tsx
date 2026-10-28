@@ -463,7 +463,7 @@ export default function ContactPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-x-8 gap-y-2 px-4 pb-4">
-          {fact("Phone", c.phone ? <a href={`tel:${c.phone}`} className="text-[#0176d3] hover:underline">{c.phone}</a> : null, "Click to dial with your phone app or softphone.")}
+          {fact("Phone", c.phone ? <a href={`tel:${c.phone}`} className="text-[#0176d3] hover:underline">{c.phone}</a> : null)}
           {fact("Email", c.email ? <a href={`mailto:${c.email}`} className="text-[#0176d3] hover:underline">{c.email}</a> : null)}
           {fact("R-number", c.r_number)}
           {fact("Owner", c.owner_email, "The person responsible for this contact's follow-up.")}
