@@ -1,6 +1,8 @@
+import copy
 from datetime import datetime, timezone
 from uuid import UUID
 
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import record
 from app.crm_logic import link_submission
 from app.crm_models import RFIInvitation
-from app.access import get_accessible_rfi, get_accessible_workspace, rfi_visible_clause
+from app.access import get_accessible_rfi, get_accessible_workspace, rfi_readable_clause, rfi_visible_clause
 from app.auth import require_form_editor, require_user
 from app.database import get_db
 from app.models import RFI, RFIResponse, RFISubmission, RFIStatus, SubmissionEvent, User, Workspace, generate_publish_key
@@ -119,16 +121,19 @@ async def list_rfis(
     db: AsyncSession = Depends(get_db),
 ):
     query = (
-        select(RFI)
+        select(RFI, Workspace.is_example)
         .outerjoin(Workspace, RFI.workspace_id == Workspace.id)
         .options(selectinload(RFI.responses))
-        .where(rfi_visible_clause(user))
+        .where(rfi_readable_clause(user))
         .order_by(RFI.created_at.desc())
     )
     if status:
         query = query.where(RFI.status == status)
-    result = await db.execute(query)
-    return result.scalars().all()
+    out = []
+    for rfi, example in (await db.execute(query)).all():
+        rfi.is_example = bool(example)
+        out.append(rfi)
+    return out
 
 
 @router.post("/", response_model=RFIOut, status_code=201)
@@ -147,7 +152,35 @@ async def create_rfi(rfi_in: RFICreate, user: User = Depends(require_form_editor
 
 @router.get("/{rfi_id}", response_model=RFIOut)
 async def get_rfi(rfi_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
-    return await get_accessible_rfi(db, user, rfi_id, with_responses=True)
+    rfi = await get_accessible_rfi(db, user, rfi_id, with_responses=True, readable=True)
+    ws = (await db.execute(select(Workspace).where(Workspace.id == rfi.workspace_id))).scalar_one_or_none() if rfi.workspace_id else None
+    rfi.is_example = bool(ws and ws.is_example)
+    if rfi.is_example and rfi.owner_id != user.id:
+        rfi.responses = []  # examples are read-only for everyone else, and their answers stay private
+    return rfi
+
+
+class RFICopyIn(BaseModel):
+    workspace_id: UUID | None = None
+
+
+@router.post("/{rfi_id}/copy", response_model=RFIOut, status_code=201)
+async def copy_rfi(rfi_id: UUID, body: RFICopyIn, user: User = Depends(require_form_editor), db: AsyncSession = Depends(get_db)):
+    """Use a form (typically a shared example) as a starting point: makes your own draft copy."""
+    src = await get_accessible_rfi(db, user, rfi_id, readable=True)
+    if body.workspace_id:
+        await get_accessible_workspace(db, user, body.workspace_id)
+    rfi = RFI(
+        subject=f"{src.subject} (copy)"[:500], question=src.question, content=copy.deepcopy(src.content),
+        thank_you_message=src.thank_you_message, created_by=user.email, owner_id=user.id, workspace_id=body.workspace_id,
+    )
+    db.add(rfi)
+    await db.flush()
+    record(db, user, "form_copied", "rfi", rfi.id, rfi.subject, {"from": str(src.id)})
+    await db.commit()
+    await db.refresh(rfi, attribute_names=["responses"])
+    rfi.is_example = False
+    return rfi
 
 
 @router.patch("/{rfi_id}", response_model=RFIOut)

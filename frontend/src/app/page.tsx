@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   RFI, Workspace, Me, fetchRFIs, fetchWorkspaces, fetchMe, deleteRFI, publishRFI,
-  createWorkspace, deleteWorkspace, getEditPath, moveRFI,
+  createWorkspace, deleteWorkspace, getEditPath, moveRFI, copyRFI,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,6 +84,15 @@ export default function DashboardPage() {
     await deleteRFI(id);
     setRfis(rfis.filter((r) => r.id !== id));
     setSidebarKey((k) => k + 1);
+  }
+
+  async function handleUseTemplate(rfi: RFI) {
+    try {
+      const copy = await copyRFI(rfi.id, null);
+      router.push(getEditPath(copy) || `/rfi/${copy.id}`);
+    } catch {
+      alert("Could not copy the example. Try again.");
+    }
   }
 
   async function handleDeleteWorkspace(id: string) {
@@ -290,6 +299,7 @@ export default function DashboardPage() {
                           <Folder className="h-5 w-5 text-indigo-600" />
                         </div>
                         <div className="flex items-center gap-1">
+                          {ws.is_example && <Badge variant="draft" className="text-xs bg-amber-100 text-amber-700">Example</Badge>}
                           <Badge
                             variant="draft"
                             className={`text-xs ${ws.visibility === "org" ? "bg-sky-100 text-sky-700" : "bg-gray-100 text-gray-600"}`}
@@ -393,10 +403,11 @@ export default function DashboardPage() {
                     <div className="divide-y">
                       {filteredRFIs.map((rfi) => {
                         const editPath = getEditPath(rfi);
+                        const readOnly = !!rfi.is_example && rfi.created_by !== me?.email;
                         return (
                           <div
                             key={rfi.id}
-                            draggable
+                            draggable={!readOnly}
                             onDragStart={(e) => startRfiDrag(e, rfi)}
                             className="flex items-center gap-4 py-4 first:pt-0 last:pb-0 cursor-grab active:cursor-grabbing"
                           >
@@ -414,6 +425,9 @@ export default function DashboardPage() {
                                 )}
                                 {rfi.content?.surveyDefinition && (
                                   <Badge variant="draft" className="bg-emerald-100 text-emerald-700 text-xs">SurveyJS</Badge>
+                                )}
+                                {rfi.is_example && (
+                                  <Badge variant="draft" className="bg-amber-100 text-amber-700 text-xs">Example</Badge>
                                 )}
                                 {rfi.is_published && (
                                   <Badge variant="open" className="bg-green-100 text-green-700 text-xs">
@@ -435,20 +449,25 @@ export default function DashboardPage() {
                                     <Copy className="h-4 w-4 text-green-600" />
                                   )}
                                 </Button>
-                              ) : rfi.content && canEdit ? (
+                              ) : rfi.content && canEdit && !readOnly ? (
                                 <Button variant="ghost" size="icon" title="Publish" onClick={() => handleQuickPublish(rfi)}>
                                   <Globe className="h-4 w-4 text-gray-400" />
                                 </Button>
                               ) : null}
+                              {readOnly && canEdit && (
+                                <Button variant="outline" size="sm" title="Make your own editable copy of this example" onClick={() => handleUseTemplate(rfi)}>
+                                  Use as template
+                                </Button>
+                              )}
                               <Button variant="ghost" size="icon" title="View" onClick={() => router.push(`/rfi/${rfi.id}`)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {editPath && canEdit && (
+                              {editPath && canEdit && !readOnly && (
                                 <Button variant="ghost" size="icon" title="Edit" onClick={() => router.push(editPath)}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               )}
-                              {canEdit && (
+                              {canEdit && !readOnly && (
                                 <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(rfi.id)}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>

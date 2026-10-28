@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import record
 from app.auth import hash_password, require_admin
 from app.database import get_db
-from app.models import Organisation, User
+from app.models import RFI, Organisation, User, Workspace
 from app.schemas import AdminResetPasswordIn, OrgCreate, OrgOut, OrgUserCreate, UserAccessPatch, UserOut
 
 router = APIRouter(prefix="/api/orgs", tags=["organisations"], dependencies=[Depends(require_admin)])
@@ -35,6 +35,35 @@ async def list_orgs(db: AsyncSession = Depends(get_db)):
         select(Organisation).options(selectinload(Organisation.users)).order_by(Organisation.created_at.desc())
     )
     return result.scalars().all()
+
+
+@router.get("/shared/workspaces")
+async def all_workspaces(db: AsyncSession = Depends(get_db)):
+    """Every workspace in the system, so an admin can mark some as shared Examples for all accounts."""
+    rows = (
+        await db.execute(
+            select(Workspace, func.count(RFI.id), User.email)
+            .outerjoin(RFI, RFI.workspace_id == Workspace.id)
+            .outerjoin(User, User.id == Workspace.owner_id)
+            .group_by(Workspace.id, User.email)
+            .order_by(Workspace.is_example.desc(), Workspace.name)
+        )
+    ).all()
+    return [
+        {"id": str(w.id), "name": w.name, "owner_email": email or w.created_by, "rfi_count": n, "is_example": w.is_example}
+        for w, n, email in rows
+    ]
+
+
+@router.patch("/shared/workspaces/{ws_id}")
+async def set_workspace_example(ws_id: UUID, body: dict, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    ws = (await db.execute(select(Workspace).where(Workspace.id == ws_id))).scalar_one_or_none()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    ws.is_example = bool(body.get("is_example"))
+    record(db, admin, "workspace_example_set", "workspace", ws.id, ws.name, {"is_example": ws.is_example})
+    await db.commit()
+    return {"id": str(ws.id), "is_example": ws.is_example}
 
 
 @router.get("/unassigned", response_model=list[UserOut])

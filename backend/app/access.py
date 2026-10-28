@@ -36,20 +36,31 @@ def rfi_visible_clause(user: User):
     )
 
 
-async def get_accessible_workspace(db: AsyncSession, user: User, ws_id: UUID) -> Workspace:
+def workspace_readable_clause(user: User):
+    """Workspaces the user may open and read: their own plus the shared Examples."""
+    return or_(workspace_visible_clause(user), Workspace.is_example.is_(True))
+
+
+def rfi_readable_clause(user: User):
+    """Forms the user may read: their own plus forms in a shared Examples workspace (never their responses)."""
+    return or_(rfi_visible_clause(user), and_(RFI.workspace_id.is_not(None), Workspace.is_example.is_(True)))
+
+
+async def get_accessible_workspace(db: AsyncSession, user: User, ws_id: UUID, readable: bool = False) -> Workspace:
+    clause = workspace_readable_clause(user) if readable else workspace_visible_clause(user)
     ws = (
-        await db.execute(select(Workspace).where(Workspace.id == ws_id, workspace_visible_clause(user)))
+        await db.execute(select(Workspace).where(Workspace.id == ws_id, clause))
     ).scalar_one_or_none()
     if not ws:
         raise HTTPException(status_code=404, detail="Workspace not found")
     return ws
 
 
-async def get_accessible_rfi(db: AsyncSession, user: User, rfi_id: UUID, with_responses: bool = False) -> RFI:
+async def get_accessible_rfi(db: AsyncSession, user: User, rfi_id: UUID, with_responses: bool = False, readable: bool = False) -> RFI:
     query = (
         select(RFI)
         .outerjoin(Workspace, RFI.workspace_id == Workspace.id)
-        .where(RFI.id == rfi_id, rfi_visible_clause(user))
+        .where(RFI.id == rfi_id, rfi_readable_clause(user) if readable else rfi_visible_clause(user))
     )
     if with_responses:
         query = query.options(selectinload(RFI.responses))

@@ -29,7 +29,7 @@ function WorkInner() {
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<WorkItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(sp.get("item"));
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(() => {

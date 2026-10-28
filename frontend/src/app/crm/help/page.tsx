@@ -35,6 +35,7 @@ const ITEMS: [string, string][] = [
   ["Merge", "Combines a duplicate record into this one. History moves over; the duplicate is removed."],
   ["Custom field", "An extra field your team adds to every contact in Setup, e.g. Employer ID."],
   ["Access types", "Set by an admin when creating a user. RFI user: builds forms and reads responses, and in the Call Center sees only people tied to their forms and the hand-offs they send or receive (call outcomes, not call notes). Call Center user: the whole Call Center, plus read-only RFI responses. A person can be both."],
+  ["Notifications (bell)", "The bell at the top shows work assigned to you, new items in your team's queue (RFI Team or Call Center), status changes and comments on items you sent. Click one to open it. The number is how many are unread."],
   ["Record owner", "The person responsible for a contact. The first agent to log activity becomes owner automatically."],
 ];
 

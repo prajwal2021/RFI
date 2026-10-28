@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.access import get_accessible_rfi, rfi_visible_clause
 from app.auth import require_user
+from app.crm_logic import notify
 from app.database import get_db
 from app.models import RFI, RFISubmission, SubmissionEvent, User, Workspace
 from app.schemas import SubmissionOut, SubmissionWithRFI
@@ -108,6 +109,7 @@ async def update_submission(
         _event(db, s.id, user, "owner", {"from": s.owner_email, "to": new_owner.email})
         s.owner_id = new_owner.id
         s.owner = new_owner
+        notify(db, new_owner.id, "assigned", "An RFI response was assigned to you", f"By {user.email}", "/", user.id)
 
     if body.clear_follow_up and s.follow_up_at:
         _event(db, s.id, user, "follow_up", {"from": s.follow_up_at.isoformat(), "to": None})

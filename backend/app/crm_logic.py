@@ -7,7 +7,7 @@ from sqlalchemy import and_, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crm_meta import JOURNEY
-from app.crm_models import Contact, ContactEvent, ContactPoint, Course, Interaction, Interest, RFIInvitation
+from app.crm_models import Contact, ContactEvent, ContactPoint, Course, Interaction, Interest, Notification, RFIInvitation
 from app.models import RFI, RFISubmission, User
 
 # ───────────────────────── normalisation ─────────────────────────
@@ -81,6 +81,23 @@ async def find_contact(db: AsyncSession, org_id: UUID | None, email: str | None 
         if hit:
             return hit
     return None
+
+
+def notify(db: AsyncSession, user_id: UUID | None, kind: str, title: str, body: str = "", link: str = "", actor_id: UUID | None = None) -> None:
+    """Add a bell notification for one person (never for the person who caused it)."""
+    if not user_id or user_id == actor_id:
+        return
+    db.add(Notification(user_id=user_id, kind=kind, title=title[:255], body=body[:1000], link=link[:500]))
+
+
+async def notify_team(db: AsyncSession, org_id: UUID | None, team: str, title: str, body: str = "", link: str = "", actor_id: UUID | None = None) -> None:
+    """Tell everyone who works a team's queue (in the item's organisation) that something new is waiting."""
+    if org_id is None:
+        return
+    flag = User.is_rfi_user if team == "rfi" else User.is_call_center_user
+    ids = (await db.execute(select(User.id).where(User.org_id == org_id, flag.is_(True)))).scalars().all()
+    for uid in ids:
+        notify(db, uid, "queue", title, body, link, actor_id)
 
 
 def add_event(db: AsyncSession, contact_id: UUID, kind: str, actor: str | None, data: dict | None = None) -> None:

@@ -9,7 +9,7 @@ from app.config import settings
 from app.database import engine, Base, async_session
 from app import crm_models  # noqa: F401  (registers Call Center tables before create_all)
 from app.crm_logic import link_unlinked_submissions, seed_courses
-from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups, images, crm
+from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups, images, crm, notifications
 from app.seed_images import seed_images
 
 
@@ -31,6 +31,7 @@ MIGRATIONS = [
     "ALTER TABLE crm_work_items ADD COLUMN IF NOT EXISTS shared_response JSONB",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_rfi_user BOOLEAN NOT NULL DEFAULT TRUE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_call_center_user BOOLEAN NOT NULL DEFAULT TRUE",
+    "ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS is_example BOOLEAN NOT NULL DEFAULT FALSE",
 ]
 
 
@@ -75,6 +76,7 @@ app.include_router(admin_audit.router)
 app.include_router(admin_backups.router)
 app.include_router(images.router)
 app.include_router(crm.router)
+app.include_router(notifications.router)
 app.include_router(rfis.router)
 app.include_router(workspaces.router)
 app.include_router(submissions.router)

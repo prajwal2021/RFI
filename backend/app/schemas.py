@@ -66,6 +66,7 @@ class RFIOut(BaseModel):
     thank_you_message: str | None = None
     created_at: datetime
     updated_at: datetime
+    is_example: bool = False
     responses: list[RFIResponseOut] = []
 
     model_config = {"from_attributes": True}
@@ -209,6 +210,7 @@ class WorkspaceOut(BaseModel):
     description: str
     created_by: str
     visibility: str = "private"
+    is_example: bool = False
     owner_email: str | None = None
     is_owner: bool = False
     rfi_count: int = 0

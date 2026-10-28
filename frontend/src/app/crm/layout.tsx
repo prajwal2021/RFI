@@ -8,6 +8,7 @@ import ProfileMenu from "@/components/profile-menu";
 import { Contact, listContacts } from "@/lib/crm";
 import { JourneyBadge } from "@/components/crm/ui";
 import { useAccess } from "@/lib/access";
+import NotificationBell from "@/components/notification-bell";
 
 const RFI_USER_HIDDEN = ["/crm/team", "/crm/courses", "/crm/settings"];
 
@@ -134,6 +135,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
           <Link href="/" className="hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded text-[13px] text-[#444] hover:bg-[#f3f3f3]" title="Switch to RFI Forms">
             <Grid3x3 className="h-4 w-4" /> RFI Forms
           </Link>
+          <NotificationBell />
           <ProfileMenu />
         </div>
         <nav className="h-10 px-3 sm:px-4 flex items-stretch gap-1 border-t border-[#e5e5e5] overflow-x-auto">

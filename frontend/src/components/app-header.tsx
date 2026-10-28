@@ -5,6 +5,7 @@ import { ClipboardCheck, Headset } from "lucide-react";
 import ProfileMenu from "@/components/profile-menu";
 import NewFormMenu from "@/components/new-form-menu";
 import { useAccess } from "@/lib/access";
+import NotificationBell from "@/components/notification-bell";
 
 export function BrandMark({ onClick }: { onClick?: () => void }) {
   return (
@@ -50,6 +51,7 @@ export default function AppHeader({
             <Headset className="h-4 w-4" /> Call Center
           </a>
           {canEditForms && <NewFormMenu workspaceId={workspaceId} />}
+          <NotificationBell />
           <ProfileMenu />
         </div>
       </div>

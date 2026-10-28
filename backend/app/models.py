@@ -30,6 +30,8 @@ class Workspace(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     visibility: Mapped[str] = mapped_column(String(16), nullable=False, default="private", server_default="private")
+    # Shared examples: every account can read the forms in it (and copy them), but never sees their responses
+    is_example: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     owner_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

@@ -21,6 +21,7 @@ export interface RFI {
   is_published: boolean;
   publish_key: string | null;
   workspace_id: string | null;
+  is_example?: boolean;
   opens_at: string | null;
   closes_at: string | null;
   max_responses: number | null;
@@ -79,6 +80,7 @@ export interface Workspace {
   description: string;
   created_by: string;
   visibility: "private" | "org";
+  is_example?: boolean;
   owner_email: string | null;
   is_owner: boolean;
   rfi_count: number;
@@ -302,6 +304,16 @@ export async function fetchAnalytics(days: number, workspace = "", rfiId = ""): 
   }
   const res = await apiFetch(`${API_BASE}/analytics/?days=${days}&tz=${encodeURIComponent(tz)}${workspace ? `&workspace=${encodeURIComponent(workspace)}` : ""}${rfiId ? `&rfi_id=${rfiId}` : ""}`);
   if (!res.ok) throw new Error("Failed to load analytics");
+  return res.json();
+}
+
+export async function copyRFI(id: string, workspaceId: string | null = null): Promise<RFI> {
+  const res = await apiFetch(`${API_BASE}/rfis/${id}/copy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ workspace_id: workspaceId }),
+  });
+  if (!res.ok) throw new Error("Could not copy the form");
   return res.json();
 }
 

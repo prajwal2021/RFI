@@ -5,7 +5,7 @@ from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.access import get_accessible_workspace, workspace_visible_clause
+from app.access import get_accessible_workspace, workspace_readable_clause, workspace_visible_clause
 from app.audit import record
 from app.auth import require_form_editor, require_user
 from app.database import get_db
@@ -28,7 +28,7 @@ async def _workspace_out(db: AsyncSession, user: User, ws_id: UUID) -> Workspace
             select(Workspace, sa_func.count(RFI.id), User.email)
             .outerjoin(RFI, RFI.workspace_id == Workspace.id)
             .outerjoin(User, User.id == Workspace.owner_id)
-            .where(Workspace.id == ws_id, workspace_visible_clause(user))
+            .where(Workspace.id == ws_id, workspace_readable_clause(user))
             .group_by(Workspace.id, User.email)
         )
     ).first()
@@ -43,7 +43,7 @@ async def list_workspaces(user: User = Depends(require_user), db: AsyncSession =
         select(Workspace, sa_func.count(RFI.id), User.email)
         .outerjoin(RFI, RFI.workspace_id == Workspace.id)
         .outerjoin(User, User.id == Workspace.owner_id)
-        .where(workspace_visible_clause(user))
+        .where(workspace_readable_clause(user))
         .group_by(Workspace.id, User.email)
         .order_by(Workspace.created_at.desc())
     )
@@ -106,11 +106,14 @@ async def delete_workspace(ws_id: UUID, user: User = Depends(require_form_editor
 
 @router.get("/{ws_id}/rfis", response_model=list[RFIOut])
 async def list_workspace_rfis(ws_id: UUID, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
-    await get_accessible_workspace(db, user, ws_id)
+    ws = await get_accessible_workspace(db, user, ws_id, readable=True)
     result = await db.execute(
         select(RFI)
         .options(selectinload(RFI.responses))
         .where(RFI.workspace_id == ws_id)
         .order_by(RFI.created_at.desc())
     )
-    return result.scalars().all()
+    rows = result.scalars().all()
+    for r in rows:
+        r.is_example = bool(ws.is_example)
+    return rows

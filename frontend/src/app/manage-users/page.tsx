@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import AppHeader from "@/components/app-header";
 import UserTree from "@/components/user-tree";
+import SharedExamples from "@/components/shared-examples";
 import {
   Organisation, OrgUser, addOrgUser, createOrg, deleteOrg, fetchOrgs, fetchUnassignedUsers, isAdmin, removeOrgUser, renameOrg,
   resetOrgUserPassword, changeUserAccess,
@@ -446,6 +447,7 @@ export default function ManageUsersPage() {
           )}
         </div>
         )}
+        <SharedExamples />
       </main>
     </div>
   );

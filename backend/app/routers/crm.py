@@ -15,7 +15,7 @@ from app.audit import record
 from app.auth import is_rfi_only, require_call_center_staff, require_user
 from app.crm_logic import (
     JOURNEY_HELP, JOURNEY_LABELS, add_event, contact_name, contact_visible_clause, find_contact, journeys, next_work_number,
-    norm_email, norm_phone, response_qa, sync_points,
+    norm_email, norm_phone, notify, notify_team, response_qa, sync_points,
 )
 from app.crm_meta import INVERSE_RELATION, as_dict, values
 from app.crm_meta import (
@@ -363,6 +363,9 @@ async def contact_360(cid: UUID, user: User = Depends(require_user), db: AsyncSe
     visible_rfis = set((await db.execute(
         select(RFI.id).outerjoin(Workspace, RFI.workspace_id == Workspace.id).where(rfi_visible_clause(user), RFI.id.in_([r.id for _, r in subs] or [None]))
     )).scalars().all())
+    if strip and rels:
+        ok = set((await db.execute(select(Contact.id).where(Contact.id.in_([o.id for _, o in rels]), _contact_scope(user)))).scalars().all())
+        rels = [(rel, o) for rel, o in rels if o.id in ok]
     emails = await _users(db, [c.owner_id, *[w.owner_id for w in work]])
     courses = {co.id: co.name for _, co in interests}
     all_courses = {co.id: co.name for co in (await db.execute(select(Course))).scalars().all()}
@@ -821,6 +824,12 @@ async def create_work(body: WorkIn, user: User = Depends(require_user), db: Asyn
     db.add(WorkItemComment(work_item_id=w.id, author_email=user.email, kind="system",
                            text=f"Created ({body.kind}) for {dict((t['value'], t['label']) for t in TEAMS)[body.team]}" + (f", assigned to {owner.email}" if owner else ", waiting in the queue")))
     record(db, user, "work_created", "work_item", w.id, f"#{w.number} {w.title}", {"kind": w.kind, "team": w.team})
+    link = f"/crm/work?item={w.id}"
+    team_label = dict((t["value"], t["label"]) for t in TEAMS)[body.team]
+    if owner:
+        notify(db, owner.id, "assigned", f"Assigned to you: #{w.number} {w.title}", f"From {user.email}", link, user.id)
+    else:
+        await notify_team(db, org_id, body.team, f"New in the {team_label} queue: #{w.number} {w.title}", f"From {user.email}", link, user.id)
     await db.commit()
     emails = await _users(db, [w.owner_id])
     return work_out(w, emails, {contact.id: contact} if contact else None)
@@ -855,6 +864,7 @@ async def get_work(wid: UUID, user: User = Depends(require_user), db: AsyncSessi
 async def update_work(wid: UUID, body: WorkPatch, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
     w = await _get_work(db, user, wid)
     notes: list[str] = []
+    old_owner, old_status = w.owner_id, w.status
     if body.claim:
         body.owner_id = user.id
     if body.unassign and w.owner_id:
@@ -898,6 +908,11 @@ async def update_work(wid: UUID, body: WorkPatch, user: User = Depends(require_u
         w.closed_at = now() if body.status in ("done", "cancelled") else None
     for n in notes:
         db.add(WorkItemComment(work_item_id=w.id, author_email=user.email, kind="system", text=n))
+    link = f"/crm/work?item={w.id}"
+    if w.owner_id and w.owner_id != old_owner:
+        notify(db, w.owner_id, "assigned", f"Assigned to you: #{w.number} {w.title}", f"By {user.email}", link, user.id)
+    if w.status != old_status:
+        notify(db, w.created_by_id, "status", f"#{w.number} is now {w.status.replace('_', ' ')}: {w.title}", f"By {user.email}", link, user.id)
     await db.commit()
     await db.refresh(w)
     c = (await db.execute(select(Contact).where(Contact.id == w.contact_id))).scalar_one_or_none() if w.contact_id else None
@@ -914,6 +929,8 @@ async def comment_work(wid: UUID, body: CommentIn, user: User = Depends(require_
     if not body.text.strip():
         raise HTTPException(status_code=400, detail="Write a comment first")
     db.add(WorkItemComment(work_item_id=w.id, author_email=user.email, kind="comment", text=body.text.strip()))
+    for uid in {w.owner_id, w.created_by_id}:
+        notify(db, uid, "comment", f"New comment on #{w.number} {w.title}", f"{user.email}: {body.text.strip()[:200]}", f"/crm/work?item={w.id}", user.id)
     w.updated_at = now()
     await db.commit()
     return {"ok": True}
