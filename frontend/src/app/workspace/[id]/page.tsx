@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import AppHeader from "@/components/app-header";
+import { useAccess } from "@/lib/access";
 import FolderSidebar from "@/components/folder-sidebar";
 import RfiThumbnail from "@/components/rfi-thumbnail";
 import { startRfiDrag } from "@/lib/dnd";
@@ -24,6 +25,7 @@ const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> =
 };
 
 export default function WorkspacePage() {
+  const { canEditForms } = useAccess();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -78,6 +80,7 @@ export default function WorkspacePage() {
   }
 
   const createButtons = (large: boolean) => {
+    if (!canEditForms) return null;
     const size = large ? undefined : ("sm" as const);
     return (
       <>

@@ -10,11 +10,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, delete, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.access import get_accessible_rfi, rfi_visible_clause
+from app.access import get_accessible_rfi, rfi_org_readable_clause, rfi_visible_clause
 from app.audit import record
 from app.auth import is_rfi_only, require_call_center_staff, require_user
 from app.crm_logic import (
-    JOURNEY_HELP, JOURNEY_LABELS, add_event, contact_name, contact_visible_clause, find_contact, journeys, next_work_number,
+    JOURNEY_HELP, JOURNEY_LABELS, add_business_days, add_event, contact_name, contact_visible_clause, find_contact, journeys, next_work_number,
     norm_email, norm_phone, notify, notify_team, response_qa, sync_points,
 )
 from app.crm_meta import INVERSE_RELATION, as_dict, values
@@ -70,8 +70,6 @@ def _work_visible(user: User):
     if user.org_id is not None:
         clauses.append(WorkItem.org_id == user.org_id)
     base = or_(*clauses)
-    if is_rfi_only(user):  # RFI users see the RFI team's queue and anything they sent or own
-        return and_(base, or_(WorkItem.team == "rfi", WorkItem.created_by_id == user.id, WorkItem.owner_id == user.id))
     return base
 
 
@@ -352,8 +350,9 @@ async def contact_360(cid: UUID, user: User = Depends(require_user), db: AsyncSe
     events = (await db.execute(select(ContactEvent).where(ContactEvent.contact_id == c.id).order_by(ContactEvent.created_at.desc()).limit(300))).scalars().all()
     subs = (await db.execute(select(RFISubmission, RFI).join(RFI, RFI.id == RFISubmission.rfi_id).where(RFISubmission.contact_id == c.id).order_by(RFISubmission.created_at.desc()))).all()
     invs = (await db.execute(select(RFIInvitation, RFI).join(RFI, RFI.id == RFIInvitation.rfi_id).where(RFIInvitation.contact_id == c.id).order_by(RFIInvitation.created_at.desc()))).all()
+    answers_clause = rfi_visible_clause(user) if is_rfi_only(user) else rfi_org_readable_clause(user)
     visible_rfis = set((await db.execute(
-        select(RFI.id).outerjoin(Workspace, RFI.workspace_id == Workspace.id).where(rfi_visible_clause(user), RFI.id.in_([r.id for _, r in subs] or [None]))
+        select(RFI.id).outerjoin(Workspace, RFI.workspace_id == Workspace.id).where(answers_clause, RFI.id.in_([r.id for _, r in subs] or [None]))
     )).scalars().all())
     if strip and rels:
         ok = set((await db.execute(select(Contact.id).where(Contact.id.in_([o.id for _, o in rels]), _contact_scope(user)))).scalars().all())
@@ -584,6 +583,15 @@ async def log_interaction(cid: UUID, body: InteractionIn, user: User = Depends(r
     if body.on_behalf_of_id:
         await _get_contact(db, user, body.on_behalf_of_id)
     when = body.occurred_at or now()
+    # A logged call answers the Call Center handoff(s) waiting for this person: close them (a no-answer keeps them open).
+    if body.channel in ("call", "voicemail") and body.outcome not in ("no_answer", "left_voicemail", "busy", "wrong_number"):
+        waiting = (await db.execute(select(WorkItem).where(
+            WorkItem.contact_id == c.id, WorkItem.kind == "handoff", WorkItem.team == "call_center", WorkItem.status.in_(OPEN_STATUSES)))).scalars().all()
+        label = dict((o["value"], o["label"]) for o in OUTCOMES).get(body.outcome or "", "call logged")
+        for h in waiting:
+            h.status, h.closed_at, h.resolution = "done", now(), h.resolution or f"Call logged: {label}"
+            db.add(WorkItemComment(work_item_id=h.id, author_email=user.email, kind="system", text=f"Closed automatically: {user.email} logged a call ({label})"))
+            notify(db, h.created_by_id, "status", f"#{h.number} is done: {h.title}", f"{user.email} logged a call ({label})", f"/crm/work?item={h.id}", user.id)
     i = Interaction(
         contact_id=c.id, channel=body.channel, direction="internal" if body.channel == "note" else body.direction,
         outcome=body.outcome, reason=body.reason, course_id=body.course_id, subject=body.subject.strip(), notes=body.notes.strip(),
@@ -850,9 +858,14 @@ async def create_work(body: WorkIn, user: User = Depends(require_user), db: Asyn
             rfi_row = (await db.execute(select(RFI).where(RFI.id == sub.rfi_id))).scalar_one()
             shared = response_qa(rfi_row.content, sub.data or {})
     owner = await _assignable(db, user, body.owner_id)
+    if body.kind == "handoff" and contact:
+        dup = (await db.execute(select(WorkItem).where(
+            WorkItem.contact_id == contact.id, WorkItem.kind == "handoff", WorkItem.team == body.team, WorkItem.status.in_(OPEN_STATUSES)).limit(1))).scalar_one_or_none()
+        if dup:
+            raise HTTPException(status_code=409, detail=f"{contact_name(contact)} already has an open handoff to this team (#{dup.number}). Open it and add a comment or edit it instead of sending another.")
     due = body.due_at
     if due is None and body.kind in ("case", "handoff"):
-        due = now() + {"urgent": timedelta(hours=4), "high": timedelta(days=1)}.get(body.priority, timedelta(days=2))
+        due = now() + timedelta(hours=4) if body.priority == "urgent" else add_business_days(now(), 1 if body.priority == "high" else 2)
     w = WorkItem(
         number=await next_work_number(db), org_id=org_id, contact_id=contact.id if contact else None, kind=body.kind, team=body.team,
         category=body.category, title=body.title.strip(), description=body.description.strip(), priority=body.priority, due_at=due,
@@ -930,10 +943,17 @@ async def update_work(wid: UUID, body: WorkPatch, user: User = Depends(require_u
     elif body.due_at and body.due_at != w.due_at:
         w.due_at = body.due_at
         notes.append(f"Due {body.due_at.strftime('%b %d, %Y %H:%M')} UTC")
+    edited = False
     if body.title is not None and body.title.strip() and body.title.strip() != w.title:
         w.title = body.title.strip()
-    if body.description is not None:
+        edited = True
+    if body.description is not None and body.description != w.description:
         w.description = body.description
+        edited = True
+    if edited:
+        notes.append("Request edited (title or details)")
+        for uid in {w.owner_id, w.created_by_id}:
+            notify(db, uid, "comment", f"#{w.number} was edited: {w.title}", f"By {user.email}", f"/crm/work?item={w.id}", user.id)
     if body.category is not None:
         _check_category(w.kind, body.category or None)
         w.category = body.category or None
@@ -1109,7 +1129,7 @@ async def update_course(course_id: UUID, body: CourseIn, user: User = Depends(re
             db.add(WorkItem(number=await next_work_number(db), org_id=person.org_id, contact_id=person.id, kind="task", team="call_center",
                             title=f"{c.name} is now open: let {contact_name(person)} know", priority="normal",
                             description="This person was on the waitlist. Contact them (respect their consent) and move the interest to Interested or Applied.",
-                            due_at=now() + timedelta(days=2), created_by_id=user.id, created_by_email=user.email, status="open"))
+                            due_at=add_business_days(now(), 2), created_by_id=user.id, created_by_email=user.email, status="open"))
             add_event(db, person.id, "course_opened", user.email, {"course": c.name})
             notified += 1
     record(db, user, "course_updated", "course", c.id, c.name, {"opened": opened, "waitlist_tasks": notified})

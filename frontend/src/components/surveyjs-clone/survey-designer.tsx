@@ -344,8 +344,8 @@ export default function SurveyDesigner({
         const rfi = await createRFI({ subject, created_by: "admin", content, workspace_id: workspaceId });
         router.push(`/rfi/${rfi.id}`);
       }
-    } catch {
-      alert("Failed to save survey");
+    } catch (e) {
+      alert(`Could not save the form: ${e instanceof Error ? e.message : "unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -392,7 +392,7 @@ export default function SurveyDesigner({
         <button onClick={() => router.push("/")} className="p-1 hover:bg-white/15 rounded mr-3" title="Back">
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-sm font-semibold tracking-wide mr-8">SurveyJS Clone</span>
+        <span className="text-sm font-semibold tracking-wide mr-8">Form Builder</span>
         <nav className="flex h-full">
           {tabs.map((t) => (
             <button

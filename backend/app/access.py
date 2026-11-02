@@ -46,6 +46,18 @@ def rfi_readable_clause(user: User):
     return or_(rfi_visible_clause(user), and_(RFI.workspace_id.is_not(None), Workspace.is_example.is_(True)))
 
 
+def rfi_org_readable_clause(user: User):
+    """For Call Center staff and admins: their own forms plus every form in their organisation, so they can read the
+    answers of the people they call even when the form sits in a colleague's private workspace."""
+    if user.org_id is None:
+        return rfi_visible_clause(user)
+    return or_(
+        rfi_visible_clause(user),
+        and_(RFI.workspace_id.is_not(None), Workspace.org_id == user.org_id),
+        and_(RFI.workspace_id.is_(None), RFI.owner_id.in_(select(User.id).where(User.org_id == user.org_id))),
+    )
+
+
 async def get_accessible_workspace(db: AsyncSession, user: User, ws_id: UUID, readable: bool = False) -> Workspace:
     clause = workspace_readable_clause(user) if readable else workspace_visible_clause(user)
     ws = (

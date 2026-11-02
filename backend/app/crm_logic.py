@@ -1,6 +1,6 @@
 """Call Center logic shared by the CRM router and the public RFI endpoints."""
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import and_, delete, func, or_, select, text
@@ -31,8 +31,20 @@ def norm_phone(v: str | None) -> str | None:
     return d if 7 <= len(d) <= 15 else None
 
 
+def add_business_days(start: datetime, days: int) -> datetime:
+    """Move forward by whole working days (Mon-Fri), so a '1-2 business days' due date never lands on a weekend."""
+    d = start
+    while days > 0:
+        d += timedelta(days=1)
+        if d.weekday() < 5:
+            days -= 1
+    while d.weekday() >= 5:
+        d += timedelta(days=1)
+    return d
+
+
 def contact_name(c: Contact) -> str:
-    n = f"{c.first_name} {c.last_name}".strip()
+    n = " ".join(f"{c.first_name or ''} {c.last_name or ''}".split())
     return n or c.email or c.phone or "Unnamed contact"
 
 

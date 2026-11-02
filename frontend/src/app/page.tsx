@@ -393,11 +393,13 @@ export default function DashboardPage() {
                       <Inbox className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-foreground mb-1">No RFIs found</h3>
                       <p className="text-muted-foreground mb-4">Get started by creating your first form</p>
-                      <div className="flex items-center justify-center gap-3">
-                        <Button onClick={() => router.push("/surveyjs-clone/new")}>
-                          <Plus className="h-4 w-4 mr-2" /> New form
-                        </Button>
-                      </div>
+                      {canEdit && (
+                        <div className="flex items-center justify-center gap-3">
+                          <Button onClick={() => router.push("/surveyjs-clone/new")}>
+                            <Plus className="h-4 w-4 mr-2" /> New form
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="divide-y">

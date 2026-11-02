@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Bell, CheckCheck } from "lucide-react";
 import { apiFetch } from "@/lib/auth";
@@ -16,9 +16,15 @@ interface Note {
   read: boolean;
 }
 
+// Remembered across page changes (the header re-mounts on every page) so a notification pops up once, not on every page.
+const announced = new Set<string>();
+let firstLoadDone = false;
+
 /** The bell: shows what was assigned to you, what landed in your team's queue, and updates on work you sent. */
 export default function NotificationBell() {
   const router = useRouter();
+  const pathname = usePathname();
+  const [popup, setPopup] = useState<Note | null>(null);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Note[]>([]);
   const [unread, setUnread] = useState(0);
@@ -31,6 +37,10 @@ export default function NotificationBell() {
       const d = await res.json();
       setItems(d.items);
       setUnread(d.unread);
+      const fresh = (d.items as Note[]).filter((n) => !n.read && !announced.has(n.id));
+      (d.items as Note[]).forEach((n) => announced.add(n.id));
+      if (firstLoadDone && fresh.length) setPopup(fresh[0]);
+      firstLoadDone = true;
     } catch {
       // the bell is a convenience; stay quiet if the request fails
     }
@@ -38,14 +48,26 @@ export default function NotificationBell() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 30000);
+    const t = setInterval(load, 15000);
     const onFocus = () => load();
+    const onVisible = () => document.visibilityState === "visible" && load();
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(t);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [load]);
+
+  // Moving between pages is a good moment to check again
+  useEffect(() => { load(); }, [pathname, load]);
+
+  useEffect(() => {
+    if (!popup) return;
+    const t = setTimeout(() => setPopup(null), 8000);
+    return () => clearTimeout(t);
+  }, [popup]);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
@@ -84,6 +106,18 @@ export default function NotificationBell() {
           </span>
         )}
       </button>
+      {popup && !open && (
+        <button
+          onClick={() => { const n = popup; setPopup(null); openItem(n); }}
+          className="fixed top-16 right-4 z-[60] w-[340px] max-w-[92vw] text-left rounded-lg border border-sky-200 bg-white shadow-xl px-3 py-2.5 flex gap-2"
+        >
+          <Bell className="h-4 w-4 text-sky-600 mt-0.5 shrink-0" />
+          <span className="min-w-0">
+            <span className="block text-[13px] font-semibold text-slate-900">{popup.title}</span>
+            {popup.body && <span className="block text-xs text-slate-500 truncate">{popup.body}</span>}
+          </span>
+        </button>
+      )}
       {open && (
         <div className="absolute right-0 mt-2 w-[360px] max-w-[92vw] rounded-lg border border-slate-200 bg-white shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">

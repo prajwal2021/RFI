@@ -60,6 +60,8 @@ export default function SurveyRunner({
   const model = useMemo(() => {
     const m = new Model(json);
     attachAppearance(m);
+    // The default "Complete" reads like a heading; people expect a Submit button (unless the form author wrote their own label)
+    if (!json?.completeText) m.completeText = "Submit";
     if (readOnly) m.mode = "display";
     if (onComplete) {
       m.showCompletedPage = false;
@@ -73,6 +75,15 @@ export default function SurveyRunner({
 
   return (
     <Themed theme={theme} className={fullPage ? "min-h-screen" : ""}>
+      <style>{`
+        .sd-navigation__complete-btn, .sd-navigation__next-btn, .sd-navigation__prev-btn {
+          min-width: 120px; padding: 12px 28px !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 16px !important;
+          cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+        }
+        .sd-navigation__complete-btn, .sd-navigation__next-btn { background-color: #0b5cad !important; color: #fff !important; border: 1px solid #0b5cad !important; }
+        .sd-navigation__complete-btn:hover, .sd-navigation__next-btn:hover { background-color: #084a8c !important; }
+        .sd-navigation__prev-btn { background-color: #fff !important; color: #0b5cad !important; border: 1px solid #0b5cad !important; }
+      `}</style>
       <div className={fullPage ? "mx-auto w-full max-w-[1000px]" : undefined}>
         <LanguageSelect model={model} />
         <Survey model={model} />

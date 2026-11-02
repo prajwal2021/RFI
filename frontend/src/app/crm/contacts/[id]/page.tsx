@@ -428,6 +428,15 @@ export default function ContactPage() {
     }
   };
   const rfiOnly = !!meta.me.rfi_only;
+  const changeStage = (it: { id: string; course: string }, v: string) => {
+    if (v === "lost") {
+      const reason = prompt(`Why was ${it.course} lost?
+${meta.lost_reasons.map((r) => `${r.value} — ${r.label}`).join("
+")}`, "timing");
+      if (!reason) return;
+      run(() => updateInterest(it.id, { stage: "lost", lost_reason: reason.trim() }), "Marked lost");
+    } else run(() => updateInterest(it.id, { stage: v }), `Moved to ${labelOf(meta.interest_stages, v)}`);
+  };
   const work = (preset: WorkPreset) => setWorkPreset({ contact_id: c.id, contact_name: c.name, ...preset });
   const openItems = data.work_items.filter((w) => !["done", "cancelled"].includes(w.status));
   const closedItems = data.work_items.filter((w) => ["done", "cancelled"].includes(w.status));
@@ -456,6 +465,18 @@ export default function ContactPage() {
             <h1 className="text-[20px] font-bold leading-tight flex flex-wrap items-center gap-2">
               {c.name} <JourneyBadge value={c.journey} label={c.journey_label} help={c.journey_help} /> <HelpTip text={c.journey_help} />
             </h1>
+            {!rfiOnly && data.interests.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+                {data.interests.map((it) => (
+                  <label key={it.id} className="inline-flex items-center gap-1.5 text-[12px] text-[#444]" title="Change where this person is for this course">
+                    <span className="font-semibold">{it.course}</span>
+                    <select value={it.stage} onChange={(e) => changeStage(it, e.target.value)} className="h-7 rounded border border-[#c9c9c9] bg-white px-1.5 text-[12px] font-medium text-[#181818]">
+                      {meta.interest_stages.map((st) => <option key={st.value} value={st.value}>{st.label}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {!rfiOnly && <button onClick={() => document.getElementById("log-activity")?.scrollIntoView({ behavior: "smooth" })} className={btn.brand}><PhoneCall className="h-3.5 w-3.5" /> Log a Call</button>}
@@ -557,15 +578,9 @@ export default function ContactPage() {
                   <li key={it.id}>
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-[13px] font-semibold truncate">{it.course}{it.course_status === "coming_soon" && <span className="ml-1 text-[11px] font-normal text-[#dd7a01]">(coming soon)</span>}</span>
-                      <button onClick={() => confirm(`Remove interest in ${it.course}?`) && run(() => deleteInterest(it.id), "Removed")} className="text-[#747474] hover:text-[#ba0517]"><Trash2 className="h-3.5 w-3.5" /></button>
+                      {!rfiOnly && <button onClick={() => confirm(`Remove interest in ${it.course}?`) && run(() => deleteInterest(it.id), "Removed")} className="text-[#747474] hover:text-[#ba0517]"><Trash2 className="h-3.5 w-3.5" /></button>}
                     </div>
-                    <Path stages={meta.interest_stages} value={it.stage} onChange={(v) => {
-                      if (v === "lost") {
-                        const reason = prompt(`Why was ${it.course} lost?\n${meta.lost_reasons.map((r) => `${r.value} — ${r.label}`).join("\n")}`, "timing");
-                        if (!reason) return;
-                        run(() => updateInterest(it.id, { stage: "lost", lost_reason: reason.trim() }), "Marked lost");
-                      } else run(() => updateInterest(it.id, { stage: v }), `Moved to ${labelOf(meta.interest_stages, v)}`);
-                    }} />
+                    <Path stages={meta.interest_stages} value={it.stage} onChange={rfiOnly ? undefined : (v) => changeStage(it, v)} />
                     {it.lost_reason && <div className="text-[11px] text-[#ba0517] mt-1">Lost: {labelOf(meta.lost_reasons, it.lost_reason)}</div>}
                   </li>
                 ))}

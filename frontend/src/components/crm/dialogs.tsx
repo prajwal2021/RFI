@@ -340,6 +340,9 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
   const [w, setW] = useState<WorkItem | null>(null);
   const [comment, setComment] = useState("");
   const [resolution, setResolution] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [tDraft, setTDraft] = useState("");
+  const [dDraft, setDDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -451,7 +454,23 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                   </dl>
                 </div>
               )}
-              {w.description && <div className="rounded bg-[#fafaf9] border border-[#e5e5e5] p-3 whitespace-pre-wrap">{w.description}</div>}
+              {editing ? (
+                <div className="rounded border border-[#c9dff5] bg-[#f3f9ff] p-3 space-y-2">
+                  <label className="block"><FieldLabel label="Title" /><input value={tDraft} onChange={(e) => setTDraft(e.target.value)} maxLength={255} className={input} /></label>
+                  <label className="block"><FieldLabel label="Details" /><textarea value={dDraft} onChange={(e) => setDDraft(e.target.value)} rows={4} className={textarea} /></label>
+                  <div className="flex gap-2">
+                    <button disabled={busy || !tDraft.trim()} onClick={async () => { await patch({ title: tDraft.trim(), description: dDraft }); setEditing(false); }} className={btn.brand}>Save changes</button>
+                    <button onClick={() => setEditing(false)} className={btn.neutral}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded bg-[#fafaf9] border border-[#e5e5e5] p-3">
+                  {w.description ? <div className="whitespace-pre-wrap">{w.description}</div> : <div className="text-[#747474]">No details yet.</div>}
+                  {w.status !== "done" && w.status !== "cancelled" && (
+                    <button onClick={() => { setTDraft(w.title); setDDraft(w.description || ""); setEditing(true); }} className="mt-2 text-[12px] text-[#0176d3] hover:underline">Edit title and details</button>
+                  )}
+                </div>
+              )}
               <label className="block">
                 <FieldLabel label="Resolution" help="Required to close a case. Say what was done so anyone reading later understands the outcome." />
                 <textarea value={resolution} onChange={(e) => setResolution(e.target.value)} onBlur={() => resolution !== (w.resolution || "") && patch({ resolution })} rows={2} className={textarea} />
