@@ -54,15 +54,15 @@ export default function CallLogPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6f6654]" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by person, phone, or words in the notes…" className={`${input} pl-9 h-9`} />
         </div>
-        <select value={days} onChange={(e) => setDays(Number(e.target.value))} className={`${input} h-9 w-auto`} aria-label="Time range">
+        <select value={days} onChange={(e) => setDays(Number(e.target.value))} className={`${input} h-9 !w-auto`} aria-label="Time range">
           {RANGES.map((r) => <option key={r.v} value={r.v}>{r.l}</option>)}
         </select>
-        <select value={agent} onChange={(e) => setAgent(e.target.value)} className={`${input} h-9 w-auto`} aria-label="Agent">
+        <select value={agent} onChange={(e) => setAgent(e.target.value)} className={`${input} h-9 !w-auto`} aria-label="Agent">
           <option value="">All agents</option>
           <option value="me">Only mine</option>
           {agents.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
-        <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className={`${input} h-9 w-auto`} aria-label="Outcome">
+        <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className={`${input} h-9 !w-auto`} aria-label="Outcome">
           <option value="">Any outcome</option>
           {meta?.outcomes.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>

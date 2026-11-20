@@ -324,8 +324,8 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
             <HelpTip text="They asked us to stop. Blocks outbound calls, RFI links and texts, and turns off all consents." />
           </label>
         </div>
-        {needsEmail && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add an email address.</b> You ticked OK to email, so this person needs an email address we can reach them on.</span></div>}
-        {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
+        {needsEmail && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded-lg border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add an email address.</b> You ticked OK to email, so this person needs an email address we can reach them on.</span></div>}
+        {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded-lg border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
         {meta.custom_fields.length > 0 && (
           <>
             <h3 className="text-[13px] font-bold border-b border-[#ebe2d0] pb-1">Additional fields</h3>
@@ -449,13 +449,13 @@ export default function ContactPage() {
   return (
     <div className="max-w-[1400px] mx-auto space-y-3">
       {c.do_not_contact && (
-        <div className="rounded border border-[#ba0517] bg-[#fef1ee] px-4 py-2 text-[13px] text-[#ba0517] flex items-center gap-2">
+        <div className="rounded-lg border border-[#ba0517] bg-[#fef1ee] px-4 py-2 text-[13px] text-[#ba0517] flex items-center gap-2">
           <Ban className="h-4 w-4" /> <b>Do not contact.</b> This person asked us to stop. Outbound calls, RFI links and texts are blocked. You can still log their inbound calls.
         </div>
       )}
 
       {/* Highlights */}
-      <section className="rounded border border-[#e2d7c0] bg-white shadow-[0_2px_2px_0_rgba(0,0,0,0.06)]">
+      <section className="rounded-xl border border-[#ebe2d0] bg-white shadow-soft">
         <div className="flex flex-wrap items-start gap-3 p-4">
           <span className="h-12 w-12 rounded bg-[#7c1fff] text-white text-xl font-bold flex items-center justify-center shrink-0">{(c.name[0] || "?").toUpperCase()}</span>
           <div className="min-w-0 flex-1">
@@ -468,7 +468,7 @@ export default function ContactPage() {
                 {data.interests.map((it) => (
                   <label key={it.id} className="inline-flex items-center gap-1.5 text-[12px] text-[#4f483d]" title="Change where this person is for this course">
                     <span className="font-semibold">{it.course}</span>
-                    <select value={it.stage} onChange={(e) => changeStage(it, e.target.value)} className="h-7 rounded border border-[#d3c6aa] bg-white px-1.5 text-[12px] font-medium text-[#1f2a22]">
+                    <select value={it.stage} onChange={(e) => changeStage(it, e.target.value)} className="h-7 rounded-lg border border-[#d3c6aa] bg-white px-1.5 text-[12px] font-medium text-[#1f2a22]">
                       {meta.interest_stages.map((st) => <option key={st.value} value={st.value}>{st.label}</option>)}
                     </select>
                   </label>
@@ -602,7 +602,7 @@ export default function ContactPage() {
             ) : (
               <div className="space-y-3 text-[13px]">
                 {data.invitations.map((inv) => (
-                  <div key={inv.id} className="rounded border border-[#ebe2d0] p-2.5">
+                  <div key={inv.id} className="rounded-lg border border-[#ebe2d0] p-2.5">
                     <div className="font-semibold">{inv.rfi}</div>
                     <div className="text-[11px] text-[#4f483d] mt-0.5 space-x-2">
                       <span>Sent {format(new Date(inv.created_at), "MMM d")} by {inv.sent_by}</span>
@@ -616,7 +616,7 @@ export default function ContactPage() {
                   </div>
                 ))}
                 {data.submissions.map((s) => (
-                  <div key={s.id} className="rounded border border-[#ebe2d0] p-2.5">
+                  <div key={s.id} className="rounded-lg border border-[#ebe2d0] p-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="font-semibold">Response: {s.rfi}</div>
                       <span className="text-[11px] text-[#4f483d]">{format(new Date(s.created_at), "MMM d, yyyy")}</span>

@@ -127,7 +127,7 @@ export default function HelpPage() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search help… e.g. classify a call, duplicate, callback, do not contact" className={`${input} pl-9 h-9`} autoFocus />
       </div>
       {nothing && (
-        <div className="rounded border border-[#ebe2d0] bg-white p-6 text-center text-[13px] text-[#6f6654]">
+        <div className="rounded-lg border border-[#ebe2d0] bg-white p-6 text-center text-[13px] text-[#6f6654]">
           Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word, such as <b>call</b>, <b>case</b>, <b>RFI</b> or <b>queue</b>.
         </div>
       )}
@@ -158,7 +158,7 @@ export default function HelpPage() {
       {howto.length > 0 && <Card title="How to…" icon={<Route className="h-4 w-4" />} iconColor="#7c1fff">
         <div className="grid md:grid-cols-2 gap-4">
           {howto.map((h) => (
-            <div key={h.title} className="rounded border border-[#ebe2d0] p-3">
+            <div key={h.title} className="rounded-lg border border-[#ebe2d0] p-3">
               <h3 className="text-[13px] font-bold mb-1">{h.title}</h3>
               <ol className="list-decimal pl-5 space-y-0.5 text-[13px] text-[#4f483d]">{h.steps.map((s) => <li key={s}>{s}</li>)}</ol>
             </div>

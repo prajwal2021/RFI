@@ -66,7 +66,7 @@ function WorkInner() {
       <Card title={current?.label || "Work"} icon={<Inbox className="h-4 w-4" />} iconColor="#7c1fff" help={current?.help} bodyClass="p-0">
         <div className="flex flex-wrap gap-2 p-3 border-b border-[#ebe2d0] bg-[#fbf8f2]">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title or #number…" className={`${input} flex-1 min-w-[200px]`} />
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${input} w-auto`}>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${input} !w-auto`}>
             <option value="open">Open (not done)</option>
             <option value="overdue">Overdue</option>
             <option value="waiting">Waiting on person</option>
@@ -74,7 +74,7 @@ function WorkInner() {
             <option value="">Any status</option>
           </select>
           {meta && (
-            <select value={kind} onChange={(e) => setKind(e.target.value)} className={`${input} w-auto`}>
+            <select value={kind} onChange={(e) => setKind(e.target.value)} className={`${input} !w-auto`}>
               <option value="">All types</option>
               {meta.work_kinds.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
             </select>

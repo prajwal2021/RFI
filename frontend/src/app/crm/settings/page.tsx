@@ -70,7 +70,7 @@ export default function SetupPage() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search setup… e.g. classify, outcome, priority, case category" className={`${input} pl-9 h-9`} />
       </div>
       {nothing && (
-        <div className="rounded border border-[#ebe2d0] bg-white p-6 text-center text-[13px] text-[#6f6654]">Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word.</div>
+        <div className="rounded-lg border border-[#ebe2d0] bg-white p-6 text-center text-[13px] text-[#6f6654]">Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word.</div>
       )}
       <ErrorBox text={error} />
       {(!ql || fields.length > 0) && <Card title="Custom contact fields" icon={<Settings className="h-4 w-4" />} iconColor="#6f6654"
@@ -107,7 +107,7 @@ export default function SetupPage() {
             <div key={l.key}>
               <h3 className="text-[13px] font-bold">{l.title}</h3>
               <p className="text-[12px] text-[#6f6654] mb-1">{l.help}</p>
-              <ul className="rounded border border-[#ebe2d0] divide-y divide-[#f5efe3]">
+              <ul className="rounded-lg border border-[#ebe2d0] divide-y divide-[#f5efe3]">
                 {l.opts.map((o) => (
                   <li key={o.value} className="px-2.5 py-1.5 text-[12px]"><b>{o.label}</b> — <span className="text-[#4f483d]">{o.description}</span></li>
                 ))}

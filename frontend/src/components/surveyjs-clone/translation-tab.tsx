@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { clone, collectLocRefs, LOCALES } from "./model";
 
-const ACCENT = "#19b394";
+const ACCENT = "#1b5038";
 
 function localeName(code: string): string {
   return LOCALES.find((l) => l.code === code)?.name || code;
@@ -113,7 +113,7 @@ export default function TranslationTab({
                         <input
                           value={r.get(l)}
                           onChange={(e) => edit(i, l, e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#19b394]"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#1b5038]"
                         />
                       </td>
                     ))}

@@ -205,7 +205,7 @@ export function Toast({ text, onDone }: { text: string; onDone: () => void }) {
 
 export function ErrorBox({ text }: { text: string | null }) {
   if (!text) return null;
-  return <div className="rounded border border-[#ba0517] bg-[#fef1ee] px-3 py-2 text-[13px] text-[#ba0517]">{text}</div>;
+  return <div className="rounded-lg border border-[#ba0517] bg-[#fef1ee] px-3 py-2 text-[13px] text-[#ba0517]">{text}</div>;
 }
 
 export function Empty({ text, children }: { text: string; children?: React.ReactNode }) {

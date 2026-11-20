@@ -10,7 +10,7 @@ import { WorkDrawer, WorkRow, WorkTableHead } from "@/components/crm/dialogs";
 
 function Stat({ label, value, help, href, tone = "#1b5038", icon }: { label: string; value: number | string; help: string; href?: string; tone?: string; icon: React.ReactNode }) {
   const body = (
-    <div className="rounded border border-[#e2d7c0] bg-white p-4 shadow-[0_2px_2px_0_rgba(0,0,0,0.06)] hover:border-[#1b5038] transition h-full">
+    <div className="rounded-xl border border-[#ebe2d0] bg-white p-4 shadow-soft hover:border-[#a366ff] hover:shadow-lift transition h-full">
       <div className="flex items-center justify-between text-[12px] text-[#4f483d]">
         <span className="flex items-center gap-1">{label} <HelpTip text={help} /></span>
         <span style={{ color: tone }}>{icon}</span>
@@ -53,7 +53,7 @@ export default function CrmHome() {
           <p className="text-[13px] text-[#4f483d]">Your calls, tasks and the people who need a follow-up today.</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/crm/contacts?new=1" className="inline-flex items-center gap-1.5 h-8 px-3 rounded border border-[#1b5038] bg-[#1b5038] text-white text-[13px] font-medium hover:bg-[#163f2d]">
+          <Link href="/crm/contacts?new=1" className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[#1b5038] bg-[#1b5038] text-white text-[13px] font-medium hover:bg-[#163f2d]">
             <PhoneCall className="h-4 w-4" /> Take a call
           </Link>
         </div>
@@ -96,7 +96,7 @@ export default function CrmHome() {
               const opt = meta?.journey.find((j) => j.value === l.value);
               return (
                 <li key={l.value}>
-                  <button onClick={() => router.push(`/crm/contacts?journey=${l.value}`)} className="w-full text-left rounded border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
+                  <button onClick={() => router.push(`/crm/contacts?journey=${l.value}`)} className="w-full text-left rounded-lg border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
                     <div className="flex items-center justify-between gap-2">
                       <JourneyBadge value={l.value} label={opt?.label} />
                       <span className="text-[18px] font-light tabular-nums">{jc[l.value] ?? 0}</span>
@@ -118,7 +118,7 @@ export default function CrmHome() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
             {home.recent_contacts.map((c) => (
-              <Link key={c.id} href={`/crm/contacts/${c.id}`} className="rounded border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
+              <Link key={c.id} href={`/crm/contacts/${c.id}`} className="rounded-lg border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
                 <div className="text-[13px] font-semibold text-[#1b5038] truncate">{c.name}</div>
                 <div className="text-[11px] text-[#6f6654] truncate">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</div>
                 <div className="mt-1"><JourneyBadge value={c.journey} label={c.journey_label} /></div>

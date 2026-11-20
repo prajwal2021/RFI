@@ -30,7 +30,7 @@ export default function TeamBoard() {
       <ErrorBox text={error} />
       <div className="grid sm:grid-cols-3 gap-3">
         {(data?.queues || []).map((q) => (
-          <div key={q.team} className="rounded border border-[#e2d7c0] bg-white p-4 shadow-[0_2px_2px_0_rgba(0,0,0,0.06)]">
+          <div key={q.team} className="rounded-xl border border-[#ebe2d0] bg-white p-4 shadow-soft">
             <div className="text-[13px] font-semibold flex items-center gap-1">{q.label} queue
               <HelpTip text="Unassigned = waiting for someone to pick it up. Oldest shows how long the oldest one has waited." /></div>
             <div className="mt-1 flex items-end gap-4">

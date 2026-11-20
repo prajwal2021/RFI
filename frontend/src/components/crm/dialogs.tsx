@@ -74,10 +74,10 @@ export function NewContactDialog({
     >
       {dup ? (
         <div className="space-y-4">
-          <div className="rounded border border-[#fe9339] bg-[#fef6ec] p-3 text-[13px]">
+          <div className="rounded-lg border border-[#fe9339] bg-[#fef6ec] p-3 text-[13px]">
             <b>This person may already exist.</b> We found a contact with the same email, phone or R-number. Open the existing record to avoid duplicates.
           </div>
-          <div className="rounded border border-[#e2d7c0] p-3 flex items-center justify-between gap-3">
+          <div className="rounded-lg border border-[#e2d7c0] p-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="font-semibold text-[14px]">{dup.name}</div>
               <div className="text-[12px] text-[#6f6654] truncate">{[dup.phone, dup.email, dup.r_number].filter(Boolean).join(" · ")}</div>
@@ -114,7 +114,7 @@ export function NewContactDialog({
             </label>
           </div>
           <OptSelect label="Contact type" opts={meta.contact_types} value={f.contact_type} onChange={(v) => set("contact_type", v)} />
-          <fieldset className="rounded border border-[#ebe2d0] p-3">
+          <fieldset className="rounded-lg border border-[#ebe2d0] p-3">
             <legend className="px-1 text-[12px] text-[#4f483d]">Consent (ask the caller)</legend>
             <div className="flex flex-wrap gap-4 text-[13px]">
               {[["consent_call", "OK to call"], ["consent_email", "OK to email"], ["consent_sms", "OK to text (SMS)"]].map(([k, l]) => (
@@ -123,8 +123,8 @@ export function NewContactDialog({
                 </label>
               ))}
             </div>
-            {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
-            {needsEmail && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add an email address.</b> You ticked OK to email, so this person needs an email address we can reach them on.</span></div>}
+            {needsPhone && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded-lg border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add a phone number.</b> You ticked a phone option (call or text), so this person needs a phone number we can reach them on.</span></div>}
+            {needsEmail && <div role="alert" className="mt-2 flex items-start gap-1.5 rounded-lg border border-[#fe9339] bg-[#fef6ec] px-2.5 py-1.5 text-[12px] text-[#7a4a00]"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /><span><b>Add an email address.</b> You ticked OK to email, so this person needs an email address we can reach them on.</span></div>}
           </fieldset>
         </div>
       )}
@@ -213,7 +213,7 @@ export function WorkItemDialog({ meta, preset, onCreated, onClose }: { meta: Met
           <textarea value={f.description} onChange={(e) => set("description", e.target.value)} rows={4} className={textarea} />
         </label>
         {preset.submission_id && (
-          <label className="flex items-start gap-2 rounded border border-[#e2d7c0] bg-[#eef5f0] px-3 py-2 text-[13px] cursor-pointer">
+          <label className="flex items-start gap-2 rounded-lg border border-[#e2d7c0] bg-[#eef5f0] px-3 py-2 text-[13px] cursor-pointer">
             <input type="checkbox" checked={shareResponse} onChange={(e) => setShareResponse(e.target.checked)} className="mt-0.5 h-4 w-4" />
             <span>
               <b>Send the RFI response to the Call Center</b>
@@ -442,7 +442,7 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
               )}
               {w.rfi_subject && <div className="text-[12px] text-[#4f483d]">Form: <b>{w.rfi_subject}</b></div>}
               {w.shared_response && w.shared_response.length > 0 && (
-                <div className="rounded border border-[#cfe3d6] bg-[#eef5f0]">
+                <div className="rounded-lg border border-[#cfe3d6] bg-[#eef5f0]">
                   <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#163f2d] border-b border-[#cfe3d6]">RFI response shared with you</div>
                   <dl className="px-3 py-2 space-y-1.5">
                     {w.shared_response.map((a, i) => (
@@ -455,7 +455,7 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                 </div>
               )}
               {editing ? (
-                <div className="rounded border border-[#cfe3d6] bg-[#eef5f0] p-3 space-y-2">
+                <div className="rounded-lg border border-[#cfe3d6] bg-[#eef5f0] p-3 space-y-2">
                   <label className="block"><FieldLabel label="Title" /><input value={tDraft} onChange={(e) => setTDraft(e.target.value)} maxLength={255} className={input} /></label>
                   <label className="block"><FieldLabel label="Details" /><textarea value={dDraft} onChange={(e) => setDDraft(e.target.value)} rows={4} className={textarea} /></label>
                   <div className="flex gap-2">
@@ -487,7 +487,7 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                 </div>
                 <ol className="space-y-2">
                   {[...(w.comments || [])].reverse().map((c) => (
-                    <li key={c.id} className={c.kind === "system" ? "text-[12px] text-[#6f6654]" : "rounded border border-[#ebe2d0] p-2.5"}>
+                    <li key={c.id} className={c.kind === "system" ? "text-[12px] text-[#6f6654]" : "rounded-lg border border-[#ebe2d0] p-2.5"}>
                       {c.kind === "system" ? (
                         <>• {c.text} — {c.author_email} · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</>
                       ) : (

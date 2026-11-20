@@ -58,7 +58,7 @@ function ContactsInner() {
   }, [query, journey, lifecycle, ctype, owner, offset]);
 
   const sel = (value: string, set: (v: string) => void, opts: { value: string; label: string }[], all: string) => (
-    <select value={value} onChange={(e) => set(e.target.value)} className={`${input} w-auto min-w-[150px]`}>
+    <select value={value} onChange={(e) => set(e.target.value)} className={`${input} !w-auto min-w-[150px]`}>
       <option value="">{all}</option>
       {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>

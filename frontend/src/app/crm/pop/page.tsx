@@ -50,7 +50,7 @@ function PopInner() {
           <div className="space-y-2">
             <p className="text-[13px] text-[#4f483d]">{rows.length} people match. Confirm who is calling (e.g. ask date of birth or R-number).</p>
             {rows.map((c) => (
-              <Link key={c.id} href={`/crm/contacts/${c.id}`} className="flex items-center justify-between gap-2 rounded border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
+              <Link key={c.id} href={`/crm/contacts/${c.id}`} className="flex items-center justify-between gap-2 rounded-lg border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
                 <span className="min-w-0"><b className="text-[13px] text-[#1b5038]">{c.name}</b>
                   <span className="block text-[11px] text-[#6f6654] truncate">{[c.phone, c.email, c.r_number, c.date_of_birth].filter(Boolean).join(" · ")}</span></span>
                 <JourneyBadge value={c.journey} label={c.journey_label} />
