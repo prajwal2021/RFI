@@ -430,9 +430,7 @@ export default function ContactPage() {
   const rfiOnly = !!meta.me.rfi_only;
   const changeStage = (it: { id: string; course: string }, v: string) => {
     if (v === "lost") {
-      const reason = prompt(`Why was ${it.course} lost?
-${meta.lost_reasons.map((r) => `${r.value} — ${r.label}`).join("
-")}`, "timing");
+      const reason = prompt(`Why was ${it.course} lost?\n${meta.lost_reasons.map((r) => `${r.value} — ${r.label}`).join("\n")}`, "timing");
       if (!reason) return;
       run(() => updateInterest(it.id, { stage: "lost", lost_reason: reason.trim() }), "Marked lost");
     } else run(() => updateInterest(it.id, { stage: v }), `Moved to ${labelOf(meta.interest_stages, v)}`);
