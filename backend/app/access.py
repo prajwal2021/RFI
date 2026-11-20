@@ -51,10 +51,12 @@ def rfi_org_readable_clause(user: User):
     answers of the people they call even when the form sits in a colleague's private workspace."""
     if user.org_id is None:
         return rfi_visible_clause(user)
+    org_users = select(User.id).where(User.org_id == user.org_id)
     return or_(
         rfi_visible_clause(user),
-        and_(RFI.workspace_id.is_not(None), Workspace.org_id == user.org_id),
-        and_(RFI.workspace_id.is_(None), RFI.owner_id.in_(select(User.id).where(User.org_id == user.org_id))),
+        # private workspaces carry no org_id, so go by who owns them
+        and_(RFI.workspace_id.is_not(None), or_(Workspace.org_id == user.org_id, Workspace.owner_id.in_(org_users))),
+        and_(RFI.workspace_id.is_(None), RFI.owner_id.in_(org_users)),
     )
 
 
