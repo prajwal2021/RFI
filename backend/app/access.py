@@ -49,6 +49,8 @@ def rfi_readable_clause(user: User):
 def rfi_org_readable_clause(user: User):
     """For Call Center staff and admins: their own forms plus every form in their organisation, so they can read the
     answers of the people they call even when the form sits in a colleague's private workspace."""
+    if user.is_admin:  # admins already see every Call Center contact, so they see every answer too
+        return true()
     if user.org_id is None:
         return rfi_visible_clause(user)
     org_users = select(User.id).where(User.org_id == user.org_id)
