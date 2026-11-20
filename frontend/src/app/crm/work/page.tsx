@@ -50,21 +50,21 @@ function WorkInner() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-[20px] font-bold">Work Queues</h1>
-          <p className="text-[13px] text-[#444]">Tasks, callbacks, cases and handoffs. Unassigned items wait in a team queue until someone picks them up.</p>
+          <p className="text-[13px] text-[#4f483d]">Tasks, callbacks, cases and handoffs. Unassigned items wait in a team queue until someone picks them up.</p>
         </div>
         <button onClick={() => setCreating(true)} className={btn.brand}><Plus className="h-4 w-4" /> New item</button>
       </div>
       <ErrorBox text={error || metaError} />
-      <div className="flex gap-1 overflow-x-auto border-b border-[#dddbda]">
+      <div className="flex gap-1 overflow-x-auto border-b border-[#e2d7c0]">
         {VIEWS.map((v) => (
           <button key={v.key} onClick={() => { setView(v.key); router.replace(`/crm/work`); }} title={v.help}
-            className={`px-3 py-2 text-[13px] whitespace-nowrap border-b-[3px] -mb-px ${view === v.key ? "border-[#0176d3] font-semibold" : "border-transparent text-[#444] hover:border-[#c9c9c9]"}`}>
+            className={`px-3 py-2 text-[13px] whitespace-nowrap border-b-[3px] -mb-px ${view === v.key ? "border-[#1b5038] font-semibold" : "border-transparent text-[#4f483d] hover:border-[#d3c6aa]"}`}>
             {v.label}
           </button>
         ))}
       </div>
-      <Card title={current?.label || "Work"} icon={<Inbox className="h-4 w-4" />} iconColor="#06a59a" help={current?.help} bodyClass="p-0">
-        <div className="flex flex-wrap gap-2 p-3 border-b border-[#e5e5e5] bg-[#fafaf9]">
+      <Card title={current?.label || "Work"} icon={<Inbox className="h-4 w-4" />} iconColor="#7c1fff" help={current?.help} bodyClass="p-0">
+        <div className="flex flex-wrap gap-2 p-3 border-b border-[#ebe2d0] bg-[#fbf8f2]">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title or #number…" className={`${input} flex-1 min-w-[200px]`} />
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${input} w-auto`}>
             <option value="open">Open (not done)</option>
@@ -97,7 +97,7 @@ function WorkInner() {
 
 export default function WorkPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-[13px] text-[#747474]">Loading…</div>}>
+    <Suspense fallback={<div className="p-6 text-[13px] text-[#6f6654]">Loading…</div>}>
       <WorkInner />
     </Suspense>
   );

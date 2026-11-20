@@ -95,13 +95,13 @@ export default function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => { setOpen(!open); if (!open) load(); }}
-        className="relative h-9 w-9 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+        className="relative h-9 w-9 rounded-lg text-sand-100 hover:bg-white/10 hover:text-white flex items-center justify-center transition"
         aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
         title="Notifications"
       >
         <Bell className="h-[18px] w-[18px]" />
         {unread > 0 && (
-          <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold leading-4 text-center">
+          <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-volt-500 text-white text-[10px] font-bold leading-4 text-center ring-2 ring-forest-900">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -119,7 +119,7 @@ export default function NotificationBell() {
         </button>
       )}
       {open && (
-        <div className="absolute right-0 mt-2 w-[360px] max-w-[92vw] rounded-lg border border-slate-200 bg-white shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-[360px] max-w-[92vw] rounded-xl border border-sand-200 bg-white shadow-lift z-50 overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">
             <span className="text-sm font-semibold text-slate-900">Notifications</span>
             <button onClick={readAll} disabled={unread === 0} className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:text-slate-300 disabled:no-underline">

@@ -116,7 +116,7 @@ function JsonTab({ json, onApply }: { json: any; onApply: (next: any) => void })
         value={text}
         onChange={(e) => setText(e.target.value)}
         spellCheck={false}
-        className="flex-1 min-h-0 w-full font-mono text-xs p-4 border border-gray-300 rounded bg-white focus:outline-none focus:border-[#19b394]"
+        className="flex-1 min-h-0 w-full font-mono text-xs p-4 border border-gray-300 rounded bg-white focus:outline-none focus:border-[#1b5038]"
       />
     </div>
   );

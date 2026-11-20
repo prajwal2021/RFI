@@ -7,9 +7,9 @@ import { Themed, SurveyTheme, THEME_PRESETS, FONTS } from "./theme";
 import { attachAppearance } from "./appearance";
 import { ColorField, ImageField } from "./property-grid";
 
-const ACCENT = "#19b394";
+const ACCENT = "#1b5038";
 const inputCls =
-  "w-full px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#19b394] bg-white";
+  "w-full px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#1b5038] bg-white";
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -91,7 +91,7 @@ export default function ThemeTab({
             max={24}
             value={theme.cornerRadius ?? 4}
             onChange={(e) => upd({ cornerRadius: Number(e.target.value), preset: undefined })}
-            className="w-full accent-[#19b394]"
+            className="w-full accent-[#1b5038]"
           />
         </Group>
 

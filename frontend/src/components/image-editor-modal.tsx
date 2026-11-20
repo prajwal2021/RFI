@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FlipHorizontal, FlipVertical, RotateCw, RotateCcw, X } from "lucide-react";
 
-const ACCENT = "#19b394";
+const ACCENT = "#1b5038";
 const HEX_RE = /(?<!url\()#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g;
 const MAX_BYTES = 750 * 1024;
 
@@ -31,15 +31,15 @@ function Slider({
           {unit}
         </span>
       </span>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-[#19b394]" />
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-[#1b5038]" />
     </label>
   );
 }
 
 const CHECKER: React.CSSProperties = {
-  backgroundColor: "#f3f4f6",
+  backgroundColor: "#f5efe3",
   backgroundImage:
-    "linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%)",
+    "linear-gradient(45deg,#ebe2d0 25%,transparent 25%),linear-gradient(-45deg,#ebe2d0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ebe2d0 75%),linear-gradient(-45deg,transparent 75%,#ebe2d0 75%)",
   backgroundSize: "16px 16px",
   backgroundPosition: "0 0,0 8px,8px -8px,-8px 0",
 };
@@ -167,19 +167,19 @@ function SvgEditor({ source, onApply, onClose }: { source: string; onApply: (dat
           <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Layout</div>
           <label className="flex items-center justify-between py-1 text-sm text-gray-700">
             Solid background
-            <input type="checkbox" checked={bgOn} onChange={(e) => setBgOn(e.target.checked)} className="h-4 w-4 accent-[#19b394]" />
+            <input type="checkbox" checked={bgOn} onChange={(e) => setBgOn(e.target.checked)} className="h-4 w-4 accent-[#1b5038]" />
           </label>
           {bgOn && (
             <div className="flex items-center gap-2 pb-1 pl-1">
               <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} className="h-8 w-10 p-0 border border-gray-300 rounded cursor-pointer" />
               <label className="flex items-center gap-1.5 text-xs text-gray-600">
-                <input type="checkbox" checked={rounded} onChange={(e) => setRounded(e.target.checked)} className="accent-[#19b394]" /> Rounded corners
+                <input type="checkbox" checked={rounded} onChange={(e) => setRounded(e.target.checked)} className="accent-[#1b5038]" /> Rounded corners
               </label>
             </div>
           )}
           <label className="flex items-center justify-between py-1 text-sm text-gray-700">
             Flip horizontally
-            <input type="checkbox" checked={flip} onChange={(e) => setFlip(e.target.checked)} className="h-4 w-4 accent-[#19b394]" />
+            <input type="checkbox" checked={flip} onChange={(e) => setFlip(e.target.checked)} className="h-4 w-4 accent-[#1b5038]" />
           </label>
         </div>
       </div>

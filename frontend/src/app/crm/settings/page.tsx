@@ -46,7 +46,7 @@ export default function SetupPage() {
     }
   };
 
-  if (!meta) return <div className="p-6 text-[13px] text-[#747474]">Loading…</div>;
+  if (!meta) return <div className="p-6 text-[13px] text-[#6f6654]">Loading…</div>;
 
   const ql = q.trim();
   const match = makeMatcher(ql);
@@ -63,29 +63,29 @@ export default function SetupPage() {
     <div className="max-w-6xl mx-auto space-y-3">
       <div>
         <h1 className="text-[20px] font-bold">Setup</h1>
-        <p className="text-[13px] text-[#444]">Add your own fields to contacts and review the standard lists the app uses.</p>
+        <p className="text-[13px] text-[#4f483d]">Add your own fields to contacts and review the standard lists the app uses.</p>
       </div>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#747474]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6f6654]" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search setup… e.g. classify, outcome, priority, case category" className={`${input} pl-9 h-9`} />
       </div>
       {nothing && (
-        <div className="rounded border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#747474]">Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word.</div>
+        <div className="rounded border border-[#ebe2d0] bg-white p-6 text-center text-[13px] text-[#6f6654]">Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word.</div>
       )}
       <ErrorBox text={error} />
-      {(!ql || fields.length > 0) && <Card title="Custom contact fields" icon={<Settings className="h-4 w-4" />} iconColor="#747474"
+      {(!ql || fields.length > 0) && <Card title="Custom contact fields" icon={<Settings className="h-4 w-4" />} iconColor="#6f6654"
         help="Extra fields shown on every contact (Edit → Additional fields), e.g. Employer ID or Expected graduation. Anyone can add; only admins can delete."
         actions={<button onClick={() => setEdit({ field_type: "text", optionsText: "" })} className={btn.brand}><Plus className="h-4 w-4" /> New field</button>} bodyClass="p-0">
         {fields.length === 0 ? <Empty text="No custom fields yet." /> : (
           <table className="w-full text-[13px]">
-            <thead><tr className="bg-[#fafaf9] border-b border-[#dddbda] text-left text-[11px] uppercase tracking-wide text-[#444]">
+            <thead><tr className="bg-[#fbf8f2] border-b border-[#e2d7c0] text-left text-[11px] uppercase tracking-wide text-[#4f483d]">
               <th className="px-3 py-2">Label</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Help text</th><th className="px-3 py-2" /></tr></thead>
             <tbody>
               {fields.map((f) => (
-                <tr key={f.id} className="border-b border-[#e5e5e5]">
-                  <td className="px-3 py-2 font-medium">{f.label}<div className="text-[11px] text-[#747474] font-mono">{f.key}</div></td>
-                  <td className="px-3 py-2">{labelOf(meta.custom_field_types, f.field_type)}{f.options.length > 0 && <div className="text-[11px] text-[#747474]">{f.options.join(", ")}</div>}</td>
-                  <td className="px-3 py-2 text-[#444]">{f.help_text || "—"}</td>
+                <tr key={f.id} className="border-b border-[#ebe2d0]">
+                  <td className="px-3 py-2 font-medium">{f.label}<div className="text-[11px] text-[#6f6654] font-mono">{f.key}</div></td>
+                  <td className="px-3 py-2">{labelOf(meta.custom_field_types, f.field_type)}{f.options.length > 0 && <div className="text-[11px] text-[#6f6654]">{f.options.join(", ")}</div>}</td>
+                  <td className="px-3 py-2 text-[#4f483d]">{f.help_text || "—"}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
                     <button onClick={() => setEdit({ ...f, optionsText: f.options.join("\n") })} className={btn.icon}><Pencil className="h-3.5 w-3.5" /></button>
                     {meta.me.is_admin && (
@@ -106,10 +106,10 @@ export default function SetupPage() {
           {lists.map((l) => (
             <div key={l.key}>
               <h3 className="text-[13px] font-bold">{l.title}</h3>
-              <p className="text-[12px] text-[#747474] mb-1">{l.help}</p>
-              <ul className="rounded border border-[#e5e5e5] divide-y divide-[#f3f3f3]">
+              <p className="text-[12px] text-[#6f6654] mb-1">{l.help}</p>
+              <ul className="rounded border border-[#ebe2d0] divide-y divide-[#f5efe3]">
                 {l.opts.map((o) => (
-                  <li key={o.value} className="px-2.5 py-1.5 text-[12px]"><b>{o.label}</b> — <span className="text-[#444]">{o.description}</span></li>
+                  <li key={o.value} className="px-2.5 py-1.5 text-[12px]"><b>{o.label}</b> — <span className="text-[#4f483d]">{o.description}</span></li>
                 ))}
               </ul>
             </div>

@@ -192,8 +192,8 @@ export default function FolderSidebar({
   );
 
   return (
-    <aside className="w-72 shrink-0 border-r bg-white overflow-y-auto">
-      <div className="px-4 pt-4 pb-1 text-sm font-semibold text-gray-900">Folders</div>
+    <aside className="w-72 shrink-0 border-r border-sand-200 bg-sand-100/70 overflow-y-auto">
+      <div className="px-4 pt-5 pb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-forest-700">Folders</div>
       <p className="px-4 text-[11px] text-gray-400">Drag a form onto a folder to move it.</p>
       {moveError && <div className="mx-3 mt-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700">{moveError}</div>}
       <div className="px-2 pb-6">

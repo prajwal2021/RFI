@@ -7,8 +7,8 @@ import { FileText, Globe, Inbox, TrendingUp, X, ArrowUpRight } from "lucide-reac
 import { Analytics, AnalyticsDay, fetchAnalytics } from "@/lib/api";
 
 const RANGES = [30, 90, 180] as const;
-const IND = "#6366f1";
-const EMR = "#10b981";
+const IND = "#226444";
+const EMR = "#7c1fff";
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -39,7 +39,7 @@ function Kpi({
       onClick={onClick}
       onKeyDown={(e) => onClick && (e.key === "Enter" || e.key === " ") && onClick()}
       title={onClick ? "Click to see these" : undefined}
-      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${onClick ? "cursor-pointer transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-200" : ""}`}
+      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-soft ${onClick ? "cursor-pointer transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-200" : ""}`}
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-slate-500">{label}</span>
@@ -55,9 +55,9 @@ const STATUS_LABEL: Record<string, string> = {
   new: "New", contacted: "Contacted", interested: "Interested", applied: "Applied", enrolled: "Enrolled", not_interested: "Not interested",
 };
 const STATUS_COLOR: Record<string, string> = {
-  new: "#64748b", contacted: "#0ea5e9", interested: "#6366f1", applied: "#f59e0b", enrolled: "#10b981", not_interested: "#ef4444",
+  new: "#7f7562", contacted: "#4f9670", interested: "#226444", applied: "#f59e0b", enrolled: "#7c1fff", not_interested: "#ef4444",
 };
-const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#0ea5e9", "#ec4899", "#8b5cf6", "#14b8a6", "#ef4444"];
+const PALETTE = ["#226444", "#7c1fff", "#f59e0b", "#4f9670", "#c9a96e", "#a366ff", "#2f7a54", "#ef4444"];
 
 /** Salesforce-style donut: click a slice or a legend row to drill in. */
 function Donut({
@@ -75,7 +75,7 @@ function Donut({
     <div className="flex items-center gap-5 flex-wrap">
       <svg viewBox="0 0 140 140" className="h-36 w-36 shrink-0">
         <g transform="rotate(-90 70 70)">
-          <circle cx="70" cy="70" r={R} fill="none" stroke="#f1f5f9" strokeWidth="20" />
+          <circle cx="70" cy="70" r={R} fill="none" stroke="#f5efe3" strokeWidth="20" />
           {total > 0 &&
             slices
               .filter((s) => s.value > 0)
@@ -96,8 +96,8 @@ function Donut({
                 return el;
               })}
         </g>
-        <text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="600" fill="#0f172a">{total}</text>
-        <text x="70" y="84" textAnchor="middle" fontSize="9" fill="#94a3b8">{centerLabel}</text>
+        <text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="600" fill="#1f2a22">{total}</text>
+        <text x="70" y="84" textAnchor="middle" fontSize="9" fill="#9a8f78">{centerLabel}</text>
       </svg>
       <ul className="flex-1 min-w-[150px] space-y-1">
         {slices.map((s) => (
@@ -294,7 +294,7 @@ export default function DashboardAnalytics({
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {/* Activity bars */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-soft">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h3 className="text-base font-semibold text-slate-900">Activity</h3>
@@ -327,15 +327,15 @@ export default function DashboardAnalytics({
               const v = (niceMax / 4) * i;
               return (
                 <g key={i}>
-                  <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={i === 0 ? "#e2e8f0" : "#f1f5f9"} />
-                  <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#94a3b8">{Math.round(v)}</text>
+                  <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={i === 0 ? "#ebe2d0" : "#f5efe3"} />
+                  <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#9a8f78">{Math.round(v)}</text>
                 </g>
               );
             })}
 
             {buckets.map((b, i) =>
               i % tickEvery === 0 ? (
-                <text key={b.key} x={cx(i)} y={H - 9} textAnchor="middle" fontSize="11" fill="#94a3b8">
+                <text key={b.key} x={cx(i)} y={H - 9} textAnchor="middle" fontSize="11" fill="#9a8f78">
                   {!weekly && b.key === todayKey ? "Today" : format(parse(b.start), "MMM d")}
                 </text>
               ) : null
@@ -348,7 +348,7 @@ export default function DashboardAnalytics({
               return (
                 <g key={b.key}>
                   {(isSel || isHover) && (
-                    <rect x={padL + i * step + 1} y={padT - 6} width={step - 2} height={plotH + 6} rx="6" fill={isSel ? "#eef2ff" : "#f8fafc"} />
+                    <rect x={padL + i * step + 1} y={padT - 6} width={step - 2} height={plotH + 6} rx="6" fill={isSel ? "#f6f0ff" : "#fbf8f2"} />
                   )}
                   {b.responses > 0 && (
                     <rect x={x0 - barW - 1} y={y(b.responses)} width={barW} height={y(0) - y(b.responses)} rx="3" fill={IND} />
@@ -357,10 +357,10 @@ export default function DashboardAnalytics({
                     <rect x={x0 + 1} y={y(b.created)} width={barW} height={y(0) - y(b.created)} rx="3" fill={EMR} />
                   )}
                   {showValues && b.responses > 0 && (
-                    <text x={x0 - barW / 2 - 1} y={y(b.responses) - 5} textAnchor="middle" fontSize="10" fill="#4f46e5" fontWeight="600">{b.responses}</text>
+                    <text x={x0 - barW / 2 - 1} y={y(b.responses) - 5} textAnchor="middle" fontSize="10" fill="#226444" fontWeight="600">{b.responses}</text>
                   )}
                   {showValues && b.created > 0 && (
-                    <text x={x0 + barW / 2 + 1} y={y(b.created) - 5} textAnchor="middle" fontSize="10" fill="#059669" fontWeight="600">{b.created}</text>
+                    <text x={x0 + barW / 2 + 1} y={y(b.created) - 5} textAnchor="middle" fontSize="10" fill="#7c1fff" fontWeight="600">{b.created}</text>
                   )}
                   <rect
                     x={padL + i * step}
@@ -468,7 +468,7 @@ export default function DashboardAnalytics({
 
       {/* Salesforce-style charts */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-soft">
           <h3 className="text-base font-semibold text-slate-900">Response pipeline</h3>
           <p className="text-sm text-slate-500 mt-0.5 mb-4">Where responses from the last {range} days stand · click to read them</p>
           {!data ? (
@@ -483,7 +483,7 @@ export default function DashboardAnalytics({
             />
           )}
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-soft">
           <h3 className="text-base font-semibold text-slate-900">Responses by form</h3>
           <p className="text-sm text-slate-500 mt-0.5 mb-4">Share of the last {range} days · click a slice to read them</p>
           {!data ? (
@@ -501,7 +501,7 @@ export default function DashboardAnalytics({
       </div>
 
       {/* Top forms */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-soft">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-base font-semibold text-slate-900">Top forms</h3>
@@ -525,7 +525,7 @@ export default function DashboardAnalytics({
                   <span className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
                     <span
                       className="block h-full rounded-full transition-all"
-                      style={{ width: `${Math.max(3, (f.count / topMax) * 100)}%`, background: i === 0 ? IND : "#a5b4fc" }}
+                      style={{ width: `${Math.max(3, (f.count / topMax) * 100)}%`, background: i === 0 ? IND : "#b0d3bd" }}
                     />
                   </span>
                   <span className="w-10 text-right text-sm font-semibold text-slate-900 tabular-nums">{f.count}</span>

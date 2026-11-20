@@ -97,12 +97,12 @@ export default function WorkspacePage() {
         workspaceId={id}
         left={
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
+            <Button variant="ghost" size="sm" className="text-forest-200 hover:bg-white/10 hover:text-white" onClick={() => router.push("/")}>
               <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-semibold text-slate-900 truncate">{workspace?.name}</h1>
+                <h1 className="text-base font-bold text-white truncate">{workspace?.name}</h1>
                 {workspace && (
                   <Badge
                     variant="draft"
@@ -116,7 +116,7 @@ export default function WorkspacePage() {
                   </Badge>
                 )}
               </div>
-              {workspace?.description && <p className="text-xs text-slate-500 truncate">{workspace.description}</p>}
+              {workspace?.description && <p className="text-xs text-forest-200 truncate">{workspace.description}</p>}
             </div>
           </div>
         }

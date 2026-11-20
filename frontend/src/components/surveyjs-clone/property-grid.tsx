@@ -13,7 +13,7 @@ import ImageEditorModal from "@/components/image-editor-modal";
 import { isLibraryUrl } from "@/lib/images";
 
 const inputCls =
-  "w-full px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#19b394] focus:ring-1 focus:ring-[#19b394] bg-white";
+  "w-full px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-[#1b5038] focus:ring-1 focus:ring-[#1b5038] bg-white";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -106,7 +106,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 accent-[#19b394]"
+        className="h-4 w-4 accent-[#1b5038]"
       />
     </label>
   );
@@ -189,15 +189,15 @@ export function ImageField({
         className={inputCls}
       />
       <div className="flex items-center gap-3 mt-1.5">
-        <button type="button" onClick={() => setShowLib(true)} className="text-xs font-semibold" style={{ color: "#19b394" }}>
+        <button type="button" onClick={() => setShowLib(true)} className="text-xs font-semibold" style={{ color: "#1b5038" }}>
           Library…
         </button>
-        <label className="text-xs font-medium cursor-pointer" style={{ color: "#19b394" }}>
+        <label className="text-xs font-medium cursor-pointer" style={{ color: "#1b5038" }}>
           Upload…
           <input type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
         </label>
         {value && (
-          <button type="button" onClick={() => setShowEdit(true)} className="text-xs font-semibold" style={{ color: "#19b394" }}>
+          <button type="button" onClick={() => setShowEdit(true)} className="text-xs font-semibold" style={{ color: "#1b5038" }}>
             Edit…
           </button>
         )}
@@ -369,7 +369,7 @@ function ValidatorsEditor({ q, onPatch }: { q: any; onPatch: (p: Record<string, 
         <button
           onClick={() => save([...list, { type: addType }])}
           className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white rounded shrink-0"
-          style={{ backgroundColor: "#19b394" }}
+          style={{ backgroundColor: "#1b5038" }}
         >
           <Plus className="h-3.5 w-3.5" /> Add
         </button>

@@ -52,7 +52,7 @@ export default function ImageLibraryModal({
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border ${category === c ? "bg-[#19b394] border-[#19b394] text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${category === c ? "bg-[#1b5038] border-[#1b5038] text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
               >
                 {c}
               </button>
@@ -64,7 +64,7 @@ export default function ImageLibraryModal({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search…"
-              className="h-8 w-44 pl-8 pr-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-[#19b394]"
+              className="h-8 w-44 pl-8 pr-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-[#1b5038]"
             />
           </div>
         </div>
@@ -85,14 +85,14 @@ export default function ImageLibraryModal({
                     onPick(img.url);
                     onClose();
                   }}
-                  className="group text-left rounded-lg border border-gray-200 hover:border-[#19b394] hover:shadow-md overflow-hidden bg-white"
+                  className="group text-left rounded-lg border border-gray-200 hover:border-[#1b5038] hover:shadow-md overflow-hidden bg-white"
                 >
                   <div
                     className="aspect-[4/3] flex items-center justify-center p-2"
                     style={{
-                      backgroundColor: "#f3f4f6",
+                      backgroundColor: "#f5efe3",
                       backgroundImage:
-                        "linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%)",
+                        "linear-gradient(45deg,#ebe2d0 25%,transparent 25%),linear-gradient(-45deg,#ebe2d0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ebe2d0 75%),linear-gradient(-45deg,transparent 75%,#ebe2d0 75%)",
                       backgroundSize: "16px 16px",
                       backgroundPosition: "0 0,0 8px,8px -8px,-8px 0",
                     }}

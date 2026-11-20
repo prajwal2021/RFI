@@ -93,7 +93,7 @@ export default function ManageUsersPage() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <AppHeader
         left={
-          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900">
+          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm font-medium text-forest-200 hover:text-white transition">
             <ArrowLeft className="h-4 w-4" /> Dashboard
           </button>
         }
@@ -126,7 +126,7 @@ export default function ManageUsersPage() {
         ) : (
         <div className="grid lg:grid-cols-[300px_1fr] gap-6 items-start">
           {/* Organisations */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-soft">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <h2 className="text-sm font-semibold text-slate-900">Organisations</h2>
               <button
@@ -209,7 +209,7 @@ export default function ManageUsersPage() {
           {/* Members */}
           {org ? (
             <div className="space-y-6">
-              <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="rounded-xl border border-slate-200 bg-white shadow-soft">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                   {renaming ? (
                     <div className="flex items-center gap-2">
@@ -388,7 +388,7 @@ export default function ManageUsersPage() {
                     await load();
                   }, `User added to ${org.name}`);
                 }}
-                className="rounded-xl border border-slate-200 bg-white shadow-sm p-5"
+                className="rounded-xl border border-slate-200 bg-white shadow-soft p-5"
               >
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-4">
                   <UserPlus className="h-4 w-4 text-indigo-500" /> Add a user to {org.name}

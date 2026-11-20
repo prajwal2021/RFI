@@ -171,7 +171,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-screen flex flex-col bg-background">
       <AppHeader
         tabs={TABS}
         activeTab={tab}
@@ -188,9 +188,16 @@ export default function DashboardPage() {
           {/* ── Overview Tab ── */}
           {tab === "overview" && (
             <div>
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold tracking-tight text-slate-900">Overview</h2>
-                <p className="text-sm text-slate-500">Forms created and responses received across your workspaces.</p>
+              <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-br from-forest-800 via-forest-900 to-forest-950 px-6 py-6 sm:px-8 text-white shadow-lift">
+                <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-volt-500/30 blur-3xl" />
+                <div className="pointer-events-none absolute right-24 -bottom-24 h-48 w-48 rounded-full bg-sand-300/20 blur-3xl" />
+                <div className="relative">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-volt-200">Overview</div>
+                  <h2 className="mt-1 text-2xl font-bold tracking-tight">
+                    {me?.email ? `Welcome back, ${me.email.split("@")[0].split(/[._-]/)[0].replace(/^./, (c) => c.toUpperCase())}` : "Welcome back"}
+                  </h2>
+                  <p className="mt-1 text-sm text-forest-100/80 max-w-xl">Forms created and responses received across your workspaces. Click any number to see the records behind it.</p>
+                </div>
               </div>
               <DashboardAnalytics onOpenResponses={openResponses} onOpenForms={openForms} />
             </div>
@@ -200,7 +207,7 @@ export default function DashboardPage() {
           {tab === "workspaces" && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Your Workspaces</h2>
+                <h2 className="text-xl font-bold tracking-tight text-forest-900">Your Workspaces</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {showNewWs ? (

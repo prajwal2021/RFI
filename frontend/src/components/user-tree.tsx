@@ -70,7 +70,7 @@ export default function UserTree({
   const admins = allUsers.filter((u) => u.is_admin).length;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-soft">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
           <Network className="h-4 w-4 text-indigo-500" /> Organisation tree

@@ -42,7 +42,7 @@ export default function CoursesPage() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-[20px] font-bold">Courses</h1>
-          <p className="text-[13px] text-[#444]">The catalog everyone shares. Agents log interest against these; RFI answers that match a course name become interests automatically.</p>
+          <p className="text-[13px] text-[#4f483d]">The catalog everyone shares. Agents log interest against these; RFI answers that match a course name become interests automatically.</p>
         </div>
         <button onClick={() => setEdit({ status: "available" })} className={btn.brand}><Plus className="h-4 w-4" /> New course</button>
       </div>
@@ -52,14 +52,14 @@ export default function CoursesPage() {
         {!rows || !meta ? <Empty text="Loading…" /> : rows.length === 0 ? <Empty text="No courses yet." /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
-              <thead><tr className="bg-[#fafaf9] border-b border-[#dddbda] text-left text-[11px] uppercase tracking-wide text-[#444]">
+              <thead><tr className="bg-[#fbf8f2] border-b border-[#e2d7c0] text-left text-[11px] uppercase tracking-wide text-[#4f483d]">
                 <th className="px-3 py-2">Course</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Interested</th><th className="px-3 py-2">Waitlist</th><th className="px-3 py-2">Enrolled</th><th className="px-3 py-2" />
               </tr></thead>
               <tbody>
                 {rows.map((c) => (
-                  <tr key={c.id} className="border-b border-[#e5e5e5]">
-                    <td className="px-3 py-2"><div className="font-medium">{c.name}</div><div className="text-[11px] text-[#747474]">{[c.code, c.category].filter(Boolean).join(" · ")}</div></td>
-                    <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.status === "available" ? "bg-[#ebf7e6] text-[#2e844a]" : c.status === "coming_soon" ? "bg-[#fef6ec] text-[#a96404]" : "bg-[#f3f3f3] text-[#747474]"}`}>{labelOf(meta.course_statuses, c.status)}</span></td>
+                  <tr key={c.id} className="border-b border-[#ebe2d0]">
+                    <td className="px-3 py-2"><div className="font-medium">{c.name}</div><div className="text-[11px] text-[#6f6654]">{[c.code, c.category].filter(Boolean).join(" · ")}</div></td>
+                    <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.status === "available" ? "bg-[#ebf7e6] text-[#2f7a54]" : c.status === "coming_soon" ? "bg-[#fef6ec] text-[#a96404]" : "bg-[#f5efe3] text-[#6f6654]"}`}>{labelOf(meta.course_statuses, c.status)}</span></td>
                     <td className="px-3 py-2 tabular-nums">{c.interested}</td>
                     <td className="px-3 py-2 tabular-nums">{c.waitlist}</td>
                     <td className="px-3 py-2 tabular-nums">{c.enrolled}</td>

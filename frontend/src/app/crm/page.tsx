@@ -8,10 +8,10 @@ import { Contact, getHome, listWork, WorkItem } from "@/lib/crm";
 import { Card, Empty, ErrorBox, HelpTip, JourneyBadge, useMeta } from "@/components/crm/ui";
 import { WorkDrawer, WorkRow, WorkTableHead } from "@/components/crm/dialogs";
 
-function Stat({ label, value, help, href, tone = "#0176d3", icon }: { label: string; value: number | string; help: string; href?: string; tone?: string; icon: React.ReactNode }) {
+function Stat({ label, value, help, href, tone = "#1b5038", icon }: { label: string; value: number | string; help: string; href?: string; tone?: string; icon: React.ReactNode }) {
   const body = (
-    <div className="rounded border border-[#dddbda] bg-white p-4 shadow-[0_2px_2px_0_rgba(0,0,0,0.06)] hover:border-[#0176d3] transition h-full">
-      <div className="flex items-center justify-between text-[12px] text-[#444]">
+    <div className="rounded border border-[#e2d7c0] bg-white p-4 shadow-[0_2px_2px_0_rgba(0,0,0,0.06)] hover:border-[#1b5038] transition h-full">
+      <div className="flex items-center justify-between text-[12px] text-[#4f483d]">
         <span className="flex items-center gap-1">{label} <HelpTip text={help} /></span>
         <span style={{ color: tone }}>{icon}</span>
       </div>
@@ -50,10 +50,10 @@ export default function CrmHome() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-[20px] font-bold">Home</h1>
-          <p className="text-[13px] text-[#444]">Your calls, tasks and the people who need a follow-up today.</p>
+          <p className="text-[13px] text-[#4f483d]">Your calls, tasks and the people who need a follow-up today.</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/crm/contacts?new=1" className="inline-flex items-center gap-1.5 h-8 px-3 rounded border border-[#0176d3] bg-[#0176d3] text-white text-[13px] font-medium hover:bg-[#014486]">
+          <Link href="/crm/contacts?new=1" className="inline-flex items-center gap-1.5 h-8 px-3 rounded border border-[#1b5038] bg-[#1b5038] text-white text-[13px] font-medium hover:bg-[#163f2d]">
             <PhoneCall className="h-4 w-4" /> Take a call
           </Link>
         </div>
@@ -64,20 +64,20 @@ export default function CrmHome() {
         <Stat label="My open work" value={s.my_open ?? "—"} help="Tasks, callbacks, cases and handoffs assigned to you that are not done." href="/crm/work?view=mine" icon={<ListTodo className="h-5 w-5" />} />
         <Stat label="Overdue" value={s.my_overdue ?? "—"} help="Your items past their due date. Do these first." href="/crm/work?view=mine&status=overdue" tone="#ba0517" icon={<AlarmClock className="h-5 w-5" />} />
         <Stat label="Due today" value={s.my_due_today ?? "—"} help="Your items due before midnight." href="/crm/work?view=mine" tone="#dd7a01" icon={<CalendarCheck className="h-5 w-5" />} />
-        <Stat label="My calls today" value={s.my_calls_today ?? "—"} help="Calls and voicemails you logged today." icon={<PhoneCall className="h-5 w-5" />} tone="#2e844a" />
-        <Stat label="Call Center queue" value={s.queue_call_center ?? "—"} help="Unassigned items waiting for any agent to pick up." href="/crm/work?view=queue&team=call_center" icon={<Inbox className="h-5 w-5" />} tone="#5867e8" />
+        <Stat label="My calls today" value={s.my_calls_today ?? "—"} help="Calls and voicemails you logged today." icon={<PhoneCall className="h-5 w-5" />} tone="#2f7a54" />
+        <Stat label="Call Center queue" value={s.queue_call_center ?? "—"} help="Unassigned items waiting for any agent to pick up." href="/crm/work?view=queue&team=call_center" icon={<Inbox className="h-5 w-5" />} tone="#7c1fff" />
         <Stat label="RFI Team queue" value={s.queue_rfi ?? "—"} help="Items the Call Center sent to the RFI team that nobody has picked up yet." href="/crm/work?view=queue&team=rfi" icon={<Users className="h-5 w-5" />} tone="#9050e9" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
         <Card title="My Work" icon={<ListTodo className="h-4 w-4" />} className="lg:col-span-2" bodyClass="p-0"
           help="Everything assigned to you, overdue first. Click a row to work it."
-          actions={<Link href="/crm/work?view=mine" className="text-[13px] text-[#0176d3] hover:underline">View all</Link>}>
+          actions={<Link href="/crm/work?view=mine" className="text-[13px] text-[#1b5038] hover:underline">View all</Link>}>
           {!mine || !meta ? (
             <Empty text="Loading…" />
           ) : mine.length === 0 ? (
             <Empty text="Nothing assigned to you. Pick something up from a queue.">
-              <Link href="/crm/work?view=queue&team=call_center" className="text-[13px] text-[#0176d3] hover:underline">Open the Call Center queue</Link>
+              <Link href="/crm/work?view=queue&team=call_center" className="text-[13px] text-[#1b5038] hover:underline">Open the Call Center queue</Link>
             </Empty>
           ) : (
             <div className="overflow-x-auto">
@@ -96,12 +96,12 @@ export default function CrmHome() {
               const opt = meta?.journey.find((j) => j.value === l.value);
               return (
                 <li key={l.value}>
-                  <button onClick={() => router.push(`/crm/contacts?journey=${l.value}`)} className="w-full text-left rounded border border-[#e5e5e5] p-2.5 hover:border-[#0176d3] hover:bg-[#f3f9ff]">
+                  <button onClick={() => router.push(`/crm/contacts?journey=${l.value}`)} className="w-full text-left rounded border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
                     <div className="flex items-center justify-between gap-2">
                       <JourneyBadge value={l.value} label={opt?.label} />
                       <span className="text-[18px] font-light tabular-nums">{jc[l.value] ?? 0}</span>
                     </div>
-                    <div className="mt-1 text-[12px] text-[#444]">{l.hint}</div>
+                    <div className="mt-1 text-[12px] text-[#4f483d]">{l.hint}</div>
                   </button>
                 </li>
               );
@@ -110,7 +110,7 @@ export default function CrmHome() {
         </Card>
       </div>
 
-      <Card title="Recently worked" icon={<Users className="h-4 w-4" />} iconColor="#06a59a" help="People you logged a call or note for most recently.">
+      <Card title="Recently worked" icon={<Users className="h-4 w-4" />} iconColor="#7c1fff" help="People you logged a call or note for most recently.">
         {!home ? (
           <Empty text="Loading…" />
         ) : home.recent_contacts.length === 0 ? (
@@ -118,9 +118,9 @@ export default function CrmHome() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
             {home.recent_contacts.map((c) => (
-              <Link key={c.id} href={`/crm/contacts/${c.id}`} className="rounded border border-[#e5e5e5] p-2.5 hover:border-[#0176d3] hover:bg-[#f3f9ff]">
-                <div className="text-[13px] font-semibold text-[#0176d3] truncate">{c.name}</div>
-                <div className="text-[11px] text-[#747474] truncate">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</div>
+              <Link key={c.id} href={`/crm/contacts/${c.id}`} className="rounded border border-[#ebe2d0] p-2.5 hover:border-[#1b5038] hover:bg-[#eef5f0]">
+                <div className="text-[13px] font-semibold text-[#1b5038] truncate">{c.name}</div>
+                <div className="text-[11px] text-[#6f6654] truncate">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</div>
                 <div className="mt-1"><JourneyBadge value={c.journey} label={c.journey_label} /></div>
               </Link>
             ))}

@@ -69,15 +69,15 @@ function ContactsInner() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-[20px] font-bold">Contacts</h1>
-          <p className="text-[13px] text-[#444]">Everyone who has called, been called or filled an RFI. Always search before creating someone new.</p>
+          <p className="text-[13px] text-[#4f483d]">Everyone who has called, been called or filled an RFI. Always search before creating someone new.</p>
         </div>
         <button onClick={() => setShowNew(true)} className={btn.brand}><UserPlus className="h-4 w-4" /> New Contact</button>
       </div>
       <ErrorBox text={error || metaError} />
 
-      <Card title={journey && meta ? `List: ${labelOf(meta.journey, journey)}` : "All contacts"} icon={<Contact2 className="h-4 w-4" />} iconColor="#5867e8" bodyClass="p-0"
+      <Card title={journey && meta ? `List: ${labelOf(meta.journey, journey)}` : "All contacts"} icon={<Contact2 className="h-4 w-4" />} iconColor="#7c1fff" bodyClass="p-0"
         help={journey && meta ? meta.journey.find((j) => j.value === journey)?.description : "Use the filters to build a call list, e.g. everyone who responded but was never contacted."}>
-        <div className="flex flex-wrap gap-2 p-3 border-b border-[#e5e5e5] bg-[#fafaf9]">
+        <div className="flex flex-wrap gap-2 p-3 border-b border-[#ebe2d0] bg-[#fbf8f2]">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, phone, email, R-number, organization…" className={`${input} flex-1 min-w-[220px]`} />
           {meta && sel(journey, setJourney, meta.journey, "Any journey status")}
           {meta && sel(lifecycle, setLifecycle, meta.lifecycle, "Any lifecycle")}
@@ -94,7 +94,7 @@ function ContactsInner() {
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="bg-[#fafaf9] border-b border-[#dddbda] text-left text-[11px] uppercase tracking-wide text-[#444]">
+                <tr className="bg-[#fbf8f2] border-b border-[#e2d7c0] text-left text-[11px] uppercase tracking-wide text-[#4f483d]">
                   <th className="px-3 py-2 font-semibold">Name</th>
                   <th className="px-3 py-2 font-semibold">Phone</th>
                   <th className="px-3 py-2 font-semibold">Email</th>
@@ -106,22 +106,22 @@ function ContactsInner() {
               </thead>
               <tbody>
                 {data.rows.map((c) => (
-                  <tr key={c.id} className="border-b border-[#e5e5e5] hover:bg-[#f3f9ff] cursor-pointer" onClick={() => router.push(`/crm/contacts/${c.id}`)}>
+                  <tr key={c.id} className="border-b border-[#ebe2d0] hover:bg-[#eef5f0] cursor-pointer" onClick={() => router.push(`/crm/contacts/${c.id}`)}>
                     <td className="px-3 py-2">
-                      <Link href={`/crm/contacts/${c.id}`} className="text-[#0176d3] font-medium hover:underline" onClick={(e) => e.stopPropagation()}>{c.name}</Link>
-                      <div className="flex items-center gap-1.5 text-[11px] text-[#747474]">
+                      <Link href={`/crm/contacts/${c.id}`} className="text-[#1b5038] font-medium hover:underline" onClick={(e) => e.stopPropagation()}>{c.name}</Link>
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#6f6654]">
                         {c.r_number && <span>{c.r_number}</span>}
                         {c.organization_name && <span className="truncate max-w-[160px]">{c.organization_name}</span>}
                         {c.do_not_contact && <span className="inline-flex items-center gap-0.5 text-[#ba0517] font-semibold"><Ban className="h-3 w-3" /> DNC</span>}
-                        {c.consent_sms && !c.do_not_contact && <span className="inline-flex items-center gap-0.5 text-[#2e844a]" title="Agreed to text messages"><MessageSquareText className="h-3 w-3" /> SMS</span>}
+                        {c.consent_sms && !c.do_not_contact && <span className="inline-flex items-center gap-0.5 text-[#2f7a54]" title="Agreed to text messages"><MessageSquareText className="h-3 w-3" /> SMS</span>}
                       </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{c.phone || "—"}</td>
                     <td className="px-3 py-2 truncate max-w-[220px]">{c.email || "—"}</td>
-                    <td className="px-3 py-2 text-[12px]">{labelOf(meta.contact_types, c.contact_type)}<div className="text-[#747474]">{labelOf(meta.lifecycle, c.lifecycle)}</div></td>
+                    <td className="px-3 py-2 text-[12px]">{labelOf(meta.contact_types, c.contact_type)}<div className="text-[#6f6654]">{labelOf(meta.lifecycle, c.lifecycle)}</div></td>
                     <td className="px-3 py-2"><JourneyBadge value={c.journey} label={c.journey_label} help={c.journey_help} /></td>
                     <td className="px-3 py-2 text-[12px] truncate max-w-[160px]">{c.owner_email || "—"}</td>
-                    <td className="px-3 py-2 text-[12px] text-[#444] whitespace-nowrap">{c.last_activity_at ? formatDistanceToNow(new Date(c.last_activity_at), { addSuffix: true }) : "—"}</td>
+                    <td className="px-3 py-2 text-[12px] text-[#4f483d] whitespace-nowrap">{c.last_activity_at ? formatDistanceToNow(new Date(c.last_activity_at), { addSuffix: true }) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -129,7 +129,7 @@ function ContactsInner() {
           </div>
         )}
         {data && data.total > PAGE && (
-          <div className="flex items-center justify-between px-3 py-2 border-t border-[#e5e5e5] text-[12px] text-[#444]">
+          <div className="flex items-center justify-between px-3 py-2 border-t border-[#ebe2d0] text-[12px] text-[#4f483d]">
             <span>{offset + 1}–{Math.min(offset + PAGE, data.total)} of {data.total}</span>
             <div className="flex gap-1">
               <button disabled={offset === 0} onClick={() => setOffset(offset - PAGE)} className={btn.icon} aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
@@ -153,7 +153,7 @@ function ContactsInner() {
 
 export default function ContactsPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-[13px] text-[#747474]">Loading…</div>}>
+    <Suspense fallback={<div className="p-6 text-[13px] text-[#6f6654]">Loading…</div>}>
       <ContactsInner />
     </Suspense>
   );

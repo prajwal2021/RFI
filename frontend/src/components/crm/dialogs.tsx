@@ -77,15 +77,15 @@ export function NewContactDialog({
           <div className="rounded border border-[#fe9339] bg-[#fef6ec] p-3 text-[13px]">
             <b>This person may already exist.</b> We found a contact with the same email, phone or R-number. Open the existing record to avoid duplicates.
           </div>
-          <div className="rounded border border-[#dddbda] p-3 flex items-center justify-between gap-3">
+          <div className="rounded border border-[#e2d7c0] p-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="font-semibold text-[14px]">{dup.name}</div>
-              <div className="text-[12px] text-[#747474] truncate">{[dup.phone, dup.email, dup.r_number].filter(Boolean).join(" · ")}</div>
+              <div className="text-[12px] text-[#6f6654] truncate">{[dup.phone, dup.email, dup.r_number].filter(Boolean).join(" · ")}</div>
             </div>
             <Link href={`/crm/contacts/${dup.id}`} className={btn.brand} onClick={onClose}>Open existing</Link>
           </div>
           <div className="flex justify-between items-center text-[13px]">
-            <button onClick={() => setDup(null)} className="text-[#0176d3] hover:underline">Back to the form</button>
+            <button onClick={() => setDup(null)} className="text-[#1b5038] hover:underline">Back to the form</button>
             <button onClick={() => save(true)} disabled={busy} className={btn.neutral}>They are a different person — create anyway</button>
           </div>
         </div>
@@ -114,12 +114,12 @@ export function NewContactDialog({
             </label>
           </div>
           <OptSelect label="Contact type" opts={meta.contact_types} value={f.contact_type} onChange={(v) => set("contact_type", v)} />
-          <fieldset className="rounded border border-[#e5e5e5] p-3">
-            <legend className="px-1 text-[12px] text-[#444]">Consent (ask the caller)</legend>
+          <fieldset className="rounded border border-[#ebe2d0] p-3">
+            <legend className="px-1 text-[12px] text-[#4f483d]">Consent (ask the caller)</legend>
             <div className="flex flex-wrap gap-4 text-[13px]">
               {[["consent_call", "OK to call"], ["consent_email", "OK to email"], ["consent_sms", "OK to text (SMS)"]].map(([k, l]) => (
                 <label key={k} className="flex items-center gap-1.5">
-                  <input type="checkbox" checked={!!f[k]} onChange={(e) => set(k, e.target.checked)} className="accent-[#0176d3]" /> {l}
+                  <input type="checkbox" checked={!!f[k]} onChange={(e) => set(k, e.target.checked)} className="accent-[#1b5038]" /> {l}
                 </label>
               ))}
             </div>
@@ -189,7 +189,7 @@ export function WorkItemDialog({ meta, preset, onCreated, onClose }: { meta: Met
       <div className="space-y-3">
         <ErrorBox text={error} />
         {preset.contact_name && (
-          <div className="text-[13px] text-[#444]">Related to <b>{preset.contact_name}</b></div>
+          <div className="text-[13px] text-[#4f483d]">Related to <b>{preset.contact_name}</b></div>
         )}
         <div className="grid sm:grid-cols-2 gap-3">
           <OptSelect label="Type" opts={meta.work_kinds} value={f.kind} onChange={(v) => { set("kind", v); set("category", ""); }} />
@@ -213,11 +213,11 @@ export function WorkItemDialog({ meta, preset, onCreated, onClose }: { meta: Met
           <textarea value={f.description} onChange={(e) => set("description", e.target.value)} rows={4} className={textarea} />
         </label>
         {preset.submission_id && (
-          <label className="flex items-start gap-2 rounded border border-[#dddbda] bg-[#f3f9ff] px-3 py-2 text-[13px] cursor-pointer">
+          <label className="flex items-start gap-2 rounded border border-[#e2d7c0] bg-[#eef5f0] px-3 py-2 text-[13px] cursor-pointer">
             <input type="checkbox" checked={shareResponse} onChange={(e) => setShareResponse(e.target.checked)} className="mt-0.5 h-4 w-4" />
             <span>
               <b>Send the RFI response to the Call Center</b>
-              <span className="block text-[12px] text-[#444]">The person&apos;s answers are attached to this item, so the agent can read them before calling. Untick to send only the request above.</span>
+              <span className="block text-[12px] text-[#4f483d]">The person&apos;s answers are attached to this item, so the agent can read them before calling. Untick to send only the request above.</span>
             </span>
           </label>
         )}
@@ -285,16 +285,16 @@ export function SendRfiDialog({ contact, onSent, onClose }: { contact: Contact; 
   return (
     <Modal title={`Send an RFI to ${contact.name}`} onClose={onClose} footer={<button onClick={onClose} className={btn.neutral}>Close</button>}>
       <div className="space-y-3 text-[13px]">
-        <p className="text-[#444]">
+        <p className="text-[#4f483d]">
           Creates a <b>personal link</b> for this person. When they open it or submit it, their record updates automatically, even if they type a different email.
         </p>
         <ErrorBox text={error} />
         {!link ? (
           <>
             {rfis === null ? (
-              <p className="text-[#747474]">Loading forms…</p>
+              <p className="text-[#6f6654]">Loading forms…</p>
             ) : rfis.length === 0 ? (
-              <p className="text-[#747474]">No published forms are available to you yet. Ask the RFI team to publish one.</p>
+              <p className="text-[#6f6654]">No published forms are available to you yet. Ask the RFI team to publish one.</p>
             ) : (
               <label className="block">
                 <FieldLabel label="Form" help="Only published forms you have access to are listed." />
@@ -316,13 +316,13 @@ export function SendRfiDialog({ contact, onSent, onClose }: { contact: Contact; 
               <input readOnly value={link} className={`${input} font-mono text-[12px]`} onFocus={(e) => e.target.select()} />
               <button onClick={copy} className={btn.neutral}><Copy className="h-3.5 w-3.5" /> {copied ? "Copied" : "Copy"}</button>
             </div>
-            <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#0176d3] hover:underline">
+            <a href={link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#1b5038] hover:underline">
               Preview the form <ExternalLink className="h-3 w-3" />
             </a>
             {contact.email && (
               <a
                 href={`mailto:${encodeURIComponent(contact.email)}?subject=${encodeURIComponent("Information you requested from TTU Online")}&body=${encodeURIComponent(`Hello ${contact.first_name || ""},\n\nPlease fill out this short form so we can help you:\n${link}\n\nThank you,\nTTU Online`)}`}
-                className="inline-flex items-center gap-1 ml-4 text-[#0176d3] hover:underline"
+                className="inline-flex items-center gap-1 ml-4 text-[#1b5038] hover:underline"
               >
                 Open in my email app <Send className="h-3 w-3" />
               </a>
@@ -386,22 +386,22 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
     <div className="fixed inset-0 z-[55] flex justify-end bg-black/30" onMouseDown={onClose}>
       <aside className="w-full max-w-lg h-full bg-white shadow-2xl overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
         {!w ? (
-          <div className="p-6 text-[13px] text-[#747474]">{error || "Loading…"}</div>
+          <div className="p-6 text-[13px] text-[#6f6654]">{error || "Loading…"}</div>
         ) : (
           <>
-            <div className="sticky top-0 bg-[#f3f3f3] border-b border-[#dddbda] px-5 py-3 flex items-start gap-3">
+            <div className="sticky top-0 bg-[#f5efe3] border-b border-[#e2d7c0] px-5 py-3 flex items-start gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wide text-[#747474]">
+                <div className="text-[11px] uppercase tracking-wide text-[#6f6654]">
                   {labelOf(meta.work_kinds, w.kind)} #{w.number} · {labelOf(meta.teams, w.team)}
                 </div>
-                <h2 className="text-[16px] font-bold text-[#181818] break-words">{w.title}</h2>
+                <h2 className="text-[16px] font-bold text-[#1f2a22] break-words">{w.title}</h2>
                 {w.contact_id && (
-                  <Link href={`/crm/contacts/${w.contact_id}`} className="text-[13px] text-[#0176d3] hover:underline" onClick={onClose}>
+                  <Link href={`/crm/contacts/${w.contact_id}`} className="text-[13px] text-[#1b5038] hover:underline" onClick={onClose}>
                     {w.contact_name || "Open contact"}
                   </Link>
                 )}
               </div>
-              <button onClick={onClose} className="text-[#747474] hover:text-[#181818]" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button onClick={onClose} className="text-[#6f6654] hover:text-[#1f2a22]" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
             <div className="p-5 space-y-4 text-[13px]">
               <ErrorBox text={error} />
@@ -436,26 +436,26 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
               </div>
               {w.category && (
                 <div>
-                  <span className="text-[12px] text-[#444]">{w.kind === "case" ? "Category" : "Reason"}: </span>
+                  <span className="text-[12px] text-[#4f483d]">{w.kind === "case" ? "Category" : "Reason"}: </span>
                   <b>{labelOf(w.kind === "case" ? meta.case_categories : meta.handoff_reasons, w.category)}</b>
                 </div>
               )}
-              {w.rfi_subject && <div className="text-[12px] text-[#444]">Form: <b>{w.rfi_subject}</b></div>}
+              {w.rfi_subject && <div className="text-[12px] text-[#4f483d]">Form: <b>{w.rfi_subject}</b></div>}
               {w.shared_response && w.shared_response.length > 0 && (
-                <div className="rounded border border-[#c9dff5] bg-[#f3f9ff]">
-                  <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#014486] border-b border-[#c9dff5]">RFI response shared with you</div>
+                <div className="rounded border border-[#cfe3d6] bg-[#eef5f0]">
+                  <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#163f2d] border-b border-[#cfe3d6]">RFI response shared with you</div>
                   <dl className="px-3 py-2 space-y-1.5">
                     {w.shared_response.map((a, i) => (
                       <div key={i}>
-                        <dt className="text-[11px] text-[#747474]">{a.label}</dt>
-                        <dd className="text-[13px] text-[#181818] whitespace-pre-wrap break-words">{a.value}</dd>
+                        <dt className="text-[11px] text-[#6f6654]">{a.label}</dt>
+                        <dd className="text-[13px] text-[#1f2a22] whitespace-pre-wrap break-words">{a.value}</dd>
                       </div>
                     ))}
                   </dl>
                 </div>
               )}
               {editing ? (
-                <div className="rounded border border-[#c9dff5] bg-[#f3f9ff] p-3 space-y-2">
+                <div className="rounded border border-[#cfe3d6] bg-[#eef5f0] p-3 space-y-2">
                   <label className="block"><FieldLabel label="Title" /><input value={tDraft} onChange={(e) => setTDraft(e.target.value)} maxLength={255} className={input} /></label>
                   <label className="block"><FieldLabel label="Details" /><textarea value={dDraft} onChange={(e) => setDDraft(e.target.value)} rows={4} className={textarea} /></label>
                   <div className="flex gap-2">
@@ -464,10 +464,10 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                   </div>
                 </div>
               ) : (
-                <div className="rounded bg-[#fafaf9] border border-[#e5e5e5] p-3">
-                  {w.description ? <div className="whitespace-pre-wrap">{w.description}</div> : <div className="text-[#747474]">No details yet.</div>}
+                <div className="rounded bg-[#fbf8f2] border border-[#ebe2d0] p-3">
+                  {w.description ? <div className="whitespace-pre-wrap">{w.description}</div> : <div className="text-[#6f6654]">No details yet.</div>}
                   {w.status !== "done" && w.status !== "cancelled" && (
-                    <button onClick={() => { setTDraft(w.title); setDDraft(w.description || ""); setEditing(true); }} className="mt-2 text-[12px] text-[#0176d3] hover:underline">Edit title and details</button>
+                    <button onClick={() => { setTDraft(w.title); setDDraft(w.description || ""); setEditing(true); }} className="mt-2 text-[12px] text-[#1b5038] hover:underline">Edit title and details</button>
                   )}
                 </div>
               )}
@@ -479,7 +479,7 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                 <button disabled={busy} onClick={() => patch({ status: "done", resolution })} className={btn.brand}>Mark done</button>
               )}
 
-              <div className="pt-2 border-t border-[#e5e5e5]">
+              <div className="pt-2 border-t border-[#ebe2d0]">
                 <FieldLabel label="Conversation & history" help="Comments between teams plus an automatic record of every change." />
                 <div className="flex gap-2 mb-3">
                   <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} placeholder="Write a comment for the other team…" className={textarea} />
@@ -487,12 +487,12 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                 </div>
                 <ol className="space-y-2">
                   {[...(w.comments || [])].reverse().map((c) => (
-                    <li key={c.id} className={c.kind === "system" ? "text-[12px] text-[#747474]" : "rounded border border-[#e5e5e5] p-2.5"}>
+                    <li key={c.id} className={c.kind === "system" ? "text-[12px] text-[#6f6654]" : "rounded border border-[#ebe2d0] p-2.5"}>
                       {c.kind === "system" ? (
                         <>• {c.text} — {c.author_email} · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</>
                       ) : (
                         <>
-                          <div className="text-[11px] text-[#747474] mb-0.5">{c.author_email} · {format(new Date(c.created_at), "MMM d, h:mm a")}</div>
+                          <div className="text-[11px] text-[#6f6654] mb-0.5">{c.author_email} · {format(new Date(c.created_at), "MMM d, h:mm a")}</div>
                           <div className="whitespace-pre-wrap">{c.text}</div>
                         </>
                       )}
@@ -500,7 +500,7 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
                   ))}
                 </ol>
               </div>
-              <div className="text-[11px] text-[#747474]">
+              <div className="text-[11px] text-[#6f6654]">
                 Created by {w.created_by_email || "—"} {w.created_at && formatDistanceToNow(new Date(w.created_at), { addSuffix: true })}
               </div>
             </div>
@@ -513,23 +513,23 @@ export function WorkDrawer({ meta, id, onClose, onChanged }: { meta: Meta; id: s
 
 export function WorkRow({ meta, w, onOpen, showContact = true }: { meta: Meta; w: WorkItem; onOpen: () => void; showContact?: boolean }) {
   return (
-    <tr className="border-b border-[#e5e5e5] hover:bg-[#f3f9ff] cursor-pointer" onClick={onOpen}>
-      <td className="px-3 py-2 text-[12px] text-[#747474] tabular-nums">#{w.number}</td>
+    <tr className="border-b border-[#ebe2d0] hover:bg-[#eef5f0] cursor-pointer" onClick={onOpen}>
+      <td className="px-3 py-2 text-[12px] text-[#6f6654] tabular-nums">#{w.number}</td>
       <td className="px-3 py-2">
-        <div className="text-[13px] text-[#0176d3] font-medium">{w.title}</div>
-        <div className="text-[11px] text-[#747474]">
+        <div className="text-[13px] text-[#1b5038] font-medium">{w.title}</div>
+        <div className="text-[11px] text-[#6f6654]">
           {labelOf(meta.work_kinds, w.kind)}
           {w.category ? ` · ${labelOf(w.kind === "case" ? meta.case_categories : meta.handoff_reasons, w.category)}` : ""}
         </div>
       </td>
-      {showContact && <td className="px-3 py-2 text-[13px]">{w.contact_name || <span className="text-[#c9c9c9]">—</span>}</td>}
+      {showContact && <td className="px-3 py-2 text-[13px]">{w.contact_name || <span className="text-[#d3c6aa]">—</span>}</td>}
       <td className="px-3 py-2 text-[12px]">{labelOf(meta.work_statuses, w.status)}</td>
       <td className={`px-3 py-2 text-[12px] capitalize ${PRIORITY_STYLE[w.priority]}`}>{w.priority}</td>
-      <td className={`px-3 py-2 text-[12px] whitespace-nowrap ${w.overdue ? "text-[#ba0517] font-semibold" : "text-[#444]"}`}>
+      <td className={`px-3 py-2 text-[12px] whitespace-nowrap ${w.overdue ? "text-[#ba0517] font-semibold" : "text-[#4f483d]"}`}>
         {w.due_at ? format(new Date(w.due_at), "MMM d, h:mm a") : "—"}
         {w.overdue && " · overdue"}
       </td>
-      <td className="px-3 py-2 text-[12px] text-[#444] truncate max-w-[180px]">{w.owner_email || <span className="text-[#b0adab]">Queue</span>}</td>
+      <td className="px-3 py-2 text-[12px] text-[#4f483d] truncate max-w-[180px]">{w.owner_email || <span className="text-[#b3a78c]">Queue</span>}</td>
     </tr>
   );
 }
@@ -537,7 +537,7 @@ export function WorkRow({ meta, w, onOpen, showContact = true }: { meta: Meta; w
 export function WorkTableHead({ showContact = true }: { showContact?: boolean }) {
   return (
     <thead>
-      <tr className="bg-[#fafaf9] border-b border-[#dddbda] text-left text-[11px] uppercase tracking-wide text-[#444]">
+      <tr className="bg-[#fbf8f2] border-b border-[#e2d7c0] text-left text-[11px] uppercase tracking-wide text-[#4f483d]">
         <th className="px-3 py-2 font-semibold">#</th>
         <th className="px-3 py-2 font-semibold">Item</th>
         {showContact && <th className="px-3 py-2 font-semibold">Contact</th>}

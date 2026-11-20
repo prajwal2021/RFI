@@ -61,9 +61,9 @@ function makeField(type: string, title: string): FormFieldDef {
 
 const PRESET_COLORS = [
   "#000000", "#374151", "#6b7280", "#ef4444", "#f97316", "#eab308",
-  "#22c55e", "#14b8a6", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899",
-  "#ffffff", "#f3f4f6", "#fef2f2", "#fff7ed", "#fefce8", "#f0fdf4",
-  "#f0fdfa", "#eff6ff", "#eef2ff", "#f5f3ff", "#fdf2f8", "#fdf4ff",
+  "#22c55e", "#2f7a54", "#3b82f6", "#226444", "#a366ff", "#c9a96e",
+  "#ffffff", "#f5efe3", "#fef2f2", "#fff7ed", "#fefce8", "#f0fdf4",
+  "#f0fdfa", "#eef5f0", "#f6f0ff", "#f6f0ff", "#fdf2f8", "#fdf4ff",
 ];
 
 // ── Color Picker ──
@@ -276,7 +276,7 @@ function FieldCard({
         <div className="flex items-start gap-2">
           <GripVertical className="h-4 w-4 text-gray-300 cursor-grab shrink-0 mt-1 opacity-0 group-hover:opacity-100" />
           <div>
-            <h3 className="font-semibold" style={{ color: field.labelColor || "#1f2937" }}>{field.title || "Section Heading"}</h3>
+            <h3 className="font-semibold" style={{ color: field.labelColor || "#1f2a22" }}>{field.title || "Section Heading"}</h3>
             {field.subtitle && <p className="text-xs text-gray-500 mt-0.5">{field.subtitle}</p>}
           </div>
         </div>
@@ -290,7 +290,7 @@ function FieldCard({
   }
 
   const fieldBg = field.fieldBgColor || "#ffffff";
-  const borderColor = field.fieldBorderColor || "#d1d5db";
+  const borderColor = field.fieldBorderColor || "#dccfb5";
   const inputPreviewStyle = { backgroundColor: fieldBg, borderColor };
 
   return (
@@ -306,7 +306,7 @@ function FieldCard({
       <div className="flex items-start gap-2">
         <GripVertical className="h-4 w-4 text-gray-300 cursor-grab shrink-0 mt-1 opacity-0 group-hover:opacity-100" />
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm mb-2" style={{ color: field.labelColor || "#1f2937" }}>
+          <div className="font-medium text-sm mb-2" style={{ color: field.labelColor || "#1f2a22" }}>
             {field.title}
             {field.required && <span className="text-red-500 ml-1">*</span>}
           </div>

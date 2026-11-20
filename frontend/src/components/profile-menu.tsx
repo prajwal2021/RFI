@@ -106,7 +106,7 @@ export default function ProfileMenu() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-sm font-semibold flex items-center justify-center shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        className="h-9 w-9 rounded-full bg-gradient-to-br from-volt-500 to-volt-700 text-white text-sm font-bold flex items-center justify-center shadow-sm ring-2 ring-white/20 hover:ring-white/40 transition focus:outline-none"
         aria-label="Profile"
         title={email}
       >

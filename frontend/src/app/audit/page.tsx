@@ -94,7 +94,7 @@ export default function AuditLogPage() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <AppHeader
         left={
-          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900">
+          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm font-medium text-forest-200 hover:text-white transition">
             <ArrowLeft className="h-4 w-4" /> Dashboard
           </button>
         }
@@ -115,7 +115,7 @@ export default function AuditLogPage() {
           </button>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-soft">
           <div className="flex flex-col md:flex-row gap-3 p-4 border-b border-slate-100">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

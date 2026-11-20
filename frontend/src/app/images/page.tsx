@@ -95,7 +95,7 @@ export default function ImageLibraryPage() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <AppHeader
         left={
-          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900">
+          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm font-medium text-forest-200 hover:text-white transition">
             <ArrowLeft className="h-4 w-4" /> Dashboard
           </button>
         }
@@ -114,7 +114,7 @@ export default function ImageLibraryPage() {
         {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
         {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>}
 
-        <form onSubmit={submit} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm mb-8">
+        <form onSubmit={submit} className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft mb-8">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 mb-4">
             <Upload className="h-4 w-4 text-indigo-500" /> Add an image
           </h2>
@@ -160,7 +160,7 @@ export default function ImageLibraryPage() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {list.map((img) => (
-                <div key={img.id} className="group relative rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div key={img.id} className="group relative rounded-xl border border-slate-200 bg-white shadow-soft overflow-hidden">
                   <div className="aspect-[4/3] flex items-center justify-center p-3 bg-slate-100">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img

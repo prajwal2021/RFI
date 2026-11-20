@@ -4,24 +4,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* 60% sand · 30% forest · 10% electric purple */
+    --background: 40 48% 94%;
+    --foreground: 136 15% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 243 75% 59%;
-    --radius: 0.625rem;
+    --card-foreground: 136 15% 14%;
+    --primary: 153 50% 21%;
+    --primary-foreground: 40 56% 97%;
+    --secondary: 40 47% 92%;
+    --secondary-foreground: 136 15% 14%;
+    --muted: 40 47% 92%;
+    --muted-foreground: 38 13% 35%;
+    --accent: 40 47% 92%;
+    --accent-foreground: 136 15% 14%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 40 56% 97%;
+    --border: 40 40% 87%;
+    --input: 40 33% 80%;
+    --ring: 265 100% 56%;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -50,8 +51,21 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Plus Jakarta Sans', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
+  ::selection {
+    background: #d9c2ff;
+    color: #161411;
+  }
+  :focus-visible {
+    outline: 2px solid #8f3dff;
+    outline-offset: 2px;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #dccfb5; border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #b8aa8c; background-clip: padding-box; border: 2px solid transparent; }
+  ::-webkit-scrollbar-track { background: transparent; }
 }
 
 .tiptap-editor .ProseMirror {

@@ -247,7 +247,7 @@ export const deleteField = (id: string) => req<void>(`/custom-fields/${id}`, { m
 export const JOURNEY_STYLE: Record<string, string> = {
   new: "bg-slate-100 text-slate-700 border-slate-200",
   called_no_rfi: "bg-sky-50 text-sky-700 border-sky-200",
-  rfi_sent: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  rfi_sent: "bg-violet-50 text-violet-700 border-violet-200",
   rfi_opened: "bg-amber-50 text-amber-800 border-amber-200",
   responded_not_contacted: "bg-red-50 text-red-700 border-red-200",
   responded_after_call: "bg-emerald-50 text-emerald-700 border-emerald-200",

@@ -93,10 +93,10 @@ const HOWTO: { title: string; steps: string[] }[] = [
 function List({ items }: { items: [string, string][] }) {
   const f = items;
   return (
-    <dl className="divide-y divide-[#f3f3f3]">
+    <dl className="divide-y divide-[#f5efe3]">
       {f.map(([a, b]) => (
         <div key={a} className="grid sm:grid-cols-[220px_1fr] gap-1 sm:gap-4 py-2 text-[13px]">
-          <dt className="font-semibold">{a}</dt><dd className="text-[#444]">{b}</dd>
+          <dt className="font-semibold">{a}</dt><dd className="text-[#4f483d]">{b}</dd>
         </div>
       ))}
     </dl>
@@ -120,20 +120,20 @@ export default function HelpPage() {
     <div className="max-w-5xl mx-auto space-y-3">
       <div>
         <h1 className="text-[20px] font-bold">Help</h1>
-        <p className="text-[13px] text-[#444]">What everything in the Call Center is and how to use it. Hover any (i) icon in the app for the same explanations.</p>
+        <p className="text-[13px] text-[#4f483d]">What everything in the Call Center is and how to use it. Hover any (i) icon in the app for the same explanations.</p>
       </div>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#747474]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6f6654]" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search help… e.g. classify a call, duplicate, callback, do not contact" className={`${input} pl-9 h-9`} autoFocus />
       </div>
       {nothing && (
-        <div className="rounded border border-[#e5e5e5] bg-white p-6 text-center text-[13px] text-[#747474]">
+        <div className="rounded border border-[#ebe2d0] bg-white p-6 text-center text-[13px] text-[#6f6654]">
           Nothing matches &ldquo;{ql}&rdquo;. Try a shorter word, such as <b>call</b>, <b>case</b>, <b>RFI</b> or <b>queue</b>.
         </div>
       )}
 
-      {showLoop && <Card title="How the loop works" icon={<Route className="h-4 w-4" />} iconColor="#2e844a">
-        <ol className="list-decimal pl-5 space-y-1 text-[13px] text-[#444]">
+      {showLoop && <Card title="How the loop works" icon={<Route className="h-4 w-4" />} iconColor="#2f7a54">
+        <ol className="list-decimal pl-5 space-y-1 text-[13px] text-[#4f483d]">
           <li>A person calls (or is called). The agent finds or creates their <b>contact</b> and <b>logs the call</b>.</li>
           <li>If they need a form, the agent sends a <b>personal RFI link</b>, or hands off to the RFI team.</li>
           <li>The app records when they <b>open</b> and <b>submit</b> the link. Any RFI response, even from the public link, is matched to the person by email, phone or R-number, or a new contact is created.</li>
@@ -146,21 +146,21 @@ export default function HelpPage() {
         <ul className="space-y-1.5">
           {journey.map((o: Opt) => (
             <li key={o.value} className="grid sm:grid-cols-[220px_1fr] gap-1 sm:gap-4 text-[13px]">
-              <span><JourneyBadge value={o.value} label={o.label} /></span><span className="text-[#444]">{o.description}</span>
+              <span><JourneyBadge value={o.value} label={o.label} /></span><span className="text-[#4f483d]">{o.description}</span>
             </li>
           ))}
         </ul>
       </Card>}
 
       {screens.length > 0 && <Card title="Screens" icon={<BookOpenCheck className="h-4 w-4" />}><List items={screens} /></Card>}
-      {items.length > 0 && <Card title="Things you work with" icon={<LifeBuoy className="h-4 w-4" />} iconColor="#5867e8"><List items={items} /></Card>}
+      {items.length > 0 && <Card title="Things you work with" icon={<LifeBuoy className="h-4 w-4" />} iconColor="#7c1fff"><List items={items} /></Card>}
 
-      {howto.length > 0 && <Card title="How to…" icon={<Route className="h-4 w-4" />} iconColor="#06a59a">
+      {howto.length > 0 && <Card title="How to…" icon={<Route className="h-4 w-4" />} iconColor="#7c1fff">
         <div className="grid md:grid-cols-2 gap-4">
           {howto.map((h) => (
-            <div key={h.title} className="rounded border border-[#e5e5e5] p-3">
+            <div key={h.title} className="rounded border border-[#ebe2d0] p-3">
               <h3 className="text-[13px] font-bold mb-1">{h.title}</h3>
-              <ol className="list-decimal pl-5 space-y-0.5 text-[13px] text-[#444]">{h.steps.map((s) => <li key={s}>{s}</li>)}</ol>
+              <ol className="list-decimal pl-5 space-y-0.5 text-[13px] text-[#4f483d]">{h.steps.map((s) => <li key={s}>{s}</li>)}</ol>
             </div>
           ))}
         </div>

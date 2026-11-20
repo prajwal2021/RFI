@@ -40,12 +40,12 @@ function label(f: FormFieldDef): string {
 
 function subtitle(f: FormFieldDef): string {
   if (!f.subtitle) return "";
-  return `<p style="font-size:12px;color:#94a3b8;margin:0 0 6px;">${esc(f.subtitle)}</p>`;
+  return `<p style="font-size:12px;color:#9a8f78;margin:0 0 6px;">${esc(f.subtitle)}</p>`;
 }
 
 function inputStyle(f: FormFieldDef): string {
   const bg = f.fieldBgColor || "#ffffff";
-  const border = f.fieldBorderColor || "#d1d5db";
+  const border = f.fieldBorderColor || "#dccfb5";
   return `width:100%;padding:10px 12px;border:1px solid ${border};border-radius:6px;font-size:14px;outline:none;font-family:inherit;background:${bg};`;
 }
 
@@ -69,10 +69,10 @@ function renderField(f: FormFieldDef): string {
 
   switch (f.type) {
     case "heading":
-      return fieldWrap(f, `<div style="margin:8px 0 0;"><h2 style="font-size:18px;font-weight:600;color:${f.labelColor || "#1e293b"};margin:0;">${esc(f.title)}</h2>${f.subtitle ? `<p style="font-size:13px;color:#64748b;margin:4px 0 0;">${esc(f.subtitle)}</p>` : ""}</div>`);
+      return fieldWrap(f, `<div style="margin:8px 0 0;"><h2 style="font-size:18px;font-weight:600;color:${f.labelColor || "#1e293b"};margin:0;">${esc(f.title)}</h2>${f.subtitle ? `<p style="font-size:13px;color:#7f7562;margin:4px 0 0;">${esc(f.subtitle)}</p>` : ""}</div>`);
 
     case "divider":
-      return `<hr style="border:none;border-top:1px solid ${f.fieldBorderColor || "#e2e8f0"};margin:20px 0;">`;
+      return `<hr style="border:none;border-top:1px solid ${f.fieldBorderColor || "#ebe2d0"};margin:20px 0;">`;
 
     case "text":
     case "email":
@@ -97,7 +97,7 @@ function renderField(f: FormFieldDef): string {
       return fieldWrap(f, `${label(f)}${subtitle(f)}${f.options.map((o) => `<label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:14px;color:#4b5563;cursor:pointer;"><input type="radio" name="${name}" value="${esc(o)}" style="width:16px;height:16px;"> ${esc(o)}</label>`).join("")}`);
 
     case "file":
-      return fieldWrap(f, `${label(f)}${subtitle(f)}<input type="file" name="${name}" style="width:100%;padding:8px;border:1px solid ${f.fieldBorderColor || "#d1d5db"};border-radius:6px;font-size:14px;background:${f.fieldBgColor || "#ffffff"};">`);
+      return fieldWrap(f, `${label(f)}${subtitle(f)}<input type="file" name="${name}" style="width:100%;padding:8px;border:1px solid ${f.fieldBorderColor || "#dccfb5"};border-radius:6px;font-size:14px;background:${f.fieldBgColor || "#ffffff"};">`);
 
     default:
       return "";
@@ -105,7 +105,7 @@ function renderField(f: FormFieldDef): string {
 }
 
 export function generateFormHTML(form: FormDef): { html: string; css: string } {
-  const pageBg = form.backgroundColor || "#f8fafc";
+  const pageBg = form.backgroundColor || "#fbf8f2";
   const bgImage = form.backgroundImage ? `background-image:url('${form.backgroundImage}');background-size:cover;background-position:center;background-attachment:fixed;` : "";
   const formBg = form.formBgColor || "#ffffff";
   const headerColor = form.headerColor || "#1e293b";
@@ -120,7 +120,7 @@ export function generateFormHTML(form: FormDef): { html: string; css: string } {
   }
   html += `<h1 style="font-size:24px;font-weight:700;color:${headerColor};margin:0 0 4px;">${esc(form.title)}</h1>`;
   if (form.description) {
-    html += `<p style="font-size:14px;color:#64748b;margin:0 0 0;">${esc(form.description)}</p>`;
+    html += `<p style="font-size:14px;color:#7f7562;margin:0 0 0;">${esc(form.description)}</p>`;
   }
   if (form.headerBgColor) {
     html += `</div>`;

@@ -12,7 +12,7 @@ import { childrenOf, getLoc, isContainer, pathEq, Path, Selection, typeLabel } f
 import { Themed, SurveyTheme } from "./theme";
 import { attachAppearance, parseAppearance } from "./appearance";
 
-export const ACCENT = "#19b394";
+export const ACCENT = "#1b5038";
 
 export const ICONS: Record<string, React.ReactNode> = {
   text: <Type className="h-4 w-4" />,

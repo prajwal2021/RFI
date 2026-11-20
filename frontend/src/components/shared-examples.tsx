@@ -39,7 +39,7 @@ export default function SharedExamples() {
   };
 
   return (
-    <div className="mt-8 rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="mt-8 rounded-xl border border-slate-200 bg-white shadow-soft">
       <div className="px-5 py-4 border-b border-slate-100">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
           <BookOpen className="h-4 w-4 text-amber-500" /> Shared examples

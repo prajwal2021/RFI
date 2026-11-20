@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { clone, getLoc, logicQuestions, walkElements } from "./model";
 
-const ACCENT = "#19b394";
-const sel = "px-2.5 py-1.5 border border-gray-300 rounded text-sm bg-white focus:outline-none focus:border-[#19b394]";
+const ACCENT = "#1b5038";
+const sel = "px-2.5 py-1.5 border border-gray-300 rounded text-sm bg-white focus:outline-none focus:border-[#1b5038]";
 
 const OPERATORS: { op: string; label: string; unary?: boolean }[] = [
   { op: "=", label: "equals" },
@@ -86,7 +86,7 @@ function RuleExpr({ expr, onSave }: { expr: string; onSave: (e: string) => void 
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        className="flex-1 px-2 py-1 border border-gray-200 rounded font-mono text-xs focus:outline-none focus:border-[#19b394]"
+        className="flex-1 px-2 py-1 border border-gray-200 rounded font-mono text-xs focus:outline-none focus:border-[#1b5038]"
       />
       {dirty && (
         <button onClick={() => onSave(text)} className="text-xs font-semibold" style={{ color: ACCENT }}>

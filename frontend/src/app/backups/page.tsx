@@ -106,7 +106,7 @@ export default function BackupsPage() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <AppHeader
         left={
-          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900">
+          <button onClick={() => router.push("/")} className="flex items-center gap-1.5 text-sm font-medium text-forest-200 hover:text-white transition">
             <ArrowLeft className="h-4 w-4" /> Dashboard
           </button>
         }
@@ -147,24 +147,24 @@ export default function BackupsPage() {
         )}
 
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
             <div className="text-sm text-slate-500">Last backup</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">
               {latest ? formatDistanceToNow(new Date(latest.created_at), { addSuffix: true }) : "—"}
             </div>
             {latest && <div className="text-xs text-slate-400">{format(new Date(latest.created_at), "MMM d, yyyy HH:mm")}</div>}
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
             <div className="text-sm text-slate-500">Stored backups</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">{data?.items.length ?? "—"}</div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
             <div className="text-sm text-slate-500">Latest size</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">{latest ? size(latest.size) : "—"}</div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-soft overflow-hidden">
           {!data ? (
             <div className="px-5 py-12 text-center text-sm text-slate-400">Loading…</div>
           ) : data.items.length === 0 ? (
@@ -201,7 +201,7 @@ export default function BackupsPage() {
           )}
         </div>
 
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
           <h2 className="text-sm font-semibold text-slate-900 mb-1">Restoring a backup</h2>
           <p className="text-sm text-slate-500 mb-3">
             Restores are done on the server so they can never happen by accident from the web app. Copy the backup file to the server&apos;s
