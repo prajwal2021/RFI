@@ -11,7 +11,7 @@ from app import crm_models  # noqa: F401  (registers Call Center tables before c
 from app.crm_logic import link_unlinked_submissions, seed_courses
 from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups, images, crm, notifications
 from app.seed_images import seed_images
-from app.starter_templates import backfill_starter_templates
+from app.starter_templates import backfill_starter_templates, refresh_starter_templates
 
 
 MIGRATIONS = [
@@ -56,6 +56,9 @@ async def lifespan(app: FastAPI):
         seeded = await backfill_starter_templates(db)
         if seeded:
             print(f"Starter templates: added to {seeded} RFI account(s)")
+        upgraded = await refresh_starter_templates(db)
+        if upgraded:
+            print(f"Starter templates: upgraded {upgraded} untouched form(s) to the latest version")
     yield
 
 

@@ -666,7 +666,7 @@ export default function PropertyGrid({
 
       {t === "html" && (
         <Section title="Content">
-          <Area label="HTML" value={q.html} onChange={set("html")} rows={6} mono />
+          <Area label="HTML" value={getLoc(q.html)} onChange={loc(q, "html")} rows={6} mono />
         </Section>
       )}
 

@@ -21,7 +21,7 @@ function WorkInner() {
   const { meta, error: metaError } = useMeta();
   const initial = sp.get("view") === "queue" ? `queue:${sp.get("team") || "call_center"}` : sp.get("view") || "mine";
   const [view, setView] = useState(initial);
-  const [status, setStatus] = useState(sp.get("status") || "open");
+  const [status, setStatus] = useState(sp.get("status") ?? (initial === "created" ? "" : "open"));
   const [kind, setKind] = useState("");
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<WorkItem[] | null>(null);
@@ -54,7 +54,7 @@ function WorkInner() {
       <ErrorBox text={error || metaError} />
       <div className="flex gap-1 overflow-x-auto border-b border-[#e2d7c0]">
         {VIEWS.map((v) => (
-          <button key={v.key} onClick={() => { setView(v.key); router.replace(`/crm/work`); }} title={v.help}
+          <button key={v.key} onClick={() => { setView(v.key); setStatus(v.key === "created" ? "" : "open"); router.replace(`/crm/work`); }} title={v.help}
             className={`px-3 py-2 text-[13px] whitespace-nowrap border-b-[3px] -mb-px ${view === v.key ? "border-[#1b5038] font-semibold" : "border-transparent text-[#4f483d] hover:border-[#d3c6aa]"}`}>
             {v.label}
           </button>

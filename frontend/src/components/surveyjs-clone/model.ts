@@ -377,6 +377,11 @@ export function collectLocRefs(json: any): LocRef[] {
 
   const el = (node: any) => {
     const n = node.name;
+    if (node.type === "html") {
+      add(node, "html", `${n} · HTML`);
+      return;
+    }
+    if (node.type === "image") return;
     add(node, "title", `${n} · title`, true, n);
     add(node, "description", `${n} · description`);
     add(node, "placeholder", `${n} · placeholder`);

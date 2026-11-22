@@ -6,6 +6,8 @@ import { Survey } from "survey-react-ui";
 import { Themed, SurveyTheme } from "@/components/surveyjs-clone/theme";
 import { attachAppearance } from "@/components/surveyjs-clone/appearance";
 import "survey-core/defaultV2.min.css";
+// Built-in labels ("Other", "Page 2 of 3", "Select…") in every language a form can be translated into
+import "survey-core/survey.i18n";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English", es: "Español", fr: "Français", de: "Deutsch", it: "Italiano", pt: "Português", nl: "Nederlands",
@@ -64,10 +66,23 @@ export default function SurveyRunner({
     if (!json?.completeText) m.completeText = "Submit";
     if (readOnly) m.mode = "display";
     if (onComplete) {
-      m.showCompletedPage = false;
-      m.onComplete.add((sender) => {
-        onComplete(sender.data);
-      });
+      if (json?.completedHtml) {
+        // The author designed a thank-you page: keep it, and show saving / error status on it while the response is sent
+        m.onComplete.add(async (sender, options: any) => {
+          options.showSaveInProgress?.("Sending your response…");
+          try {
+            await onComplete(sender.data);
+            options.showSaveSuccess?.("Your response was received.");
+          } catch (e) {
+            options.showSaveError?.(e instanceof Error ? e.message : "Could not send your response. Please try again.");
+          }
+        });
+      } else {
+        m.showCompletedPage = false;
+        m.onComplete.add((sender) => {
+          onComplete(sender.data);
+        });
+      }
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,13 +91,14 @@ export default function SurveyRunner({
   return (
     <Themed theme={theme} className={fullPage ? "min-h-screen" : ""}>
       <style>{`
+        .sjs-themed { ${theme?.primary ? "" : "--btn-bg:#1b5038;--btn-bg-dark:#163f2d;--btn-fg:#fff;"} }
         .sd-navigation__complete-btn, .sd-navigation__next-btn, .sd-navigation__prev-btn {
           min-width: 120px; padding: 12px 28px !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 16px !important;
           cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.2);
         }
-        .sd-navigation__complete-btn, .sd-navigation__next-btn { background-color: #1b5038 !important; color: #fff !important; border: 1px solid #1b5038 !important; }
-        .sd-navigation__complete-btn:hover, .sd-navigation__next-btn:hover { background-color: #163f2d !important; }
-        .sd-navigation__prev-btn { background-color: #fff !important; color: #1b5038 !important; border: 1px solid #1b5038 !important; }
+        .sd-navigation__complete-btn, .sd-navigation__next-btn { background-color: var(--btn-bg, var(--sjs-primary-backcolor)) !important; color: var(--btn-fg, var(--sjs-primary-forecolor)) !important; border: 1px solid var(--btn-bg, var(--sjs-primary-backcolor)) !important; }
+        .sd-navigation__complete-btn:hover, .sd-navigation__next-btn:hover { background-color: var(--btn-bg-dark, var(--sjs-primary-backcolor-dark)) !important; }
+        .sd-navigation__prev-btn { background-color: transparent !important; color: var(--btn-bg, var(--sjs-primary-backcolor)) !important; border: 1px solid var(--btn-bg, var(--sjs-primary-backcolor)) !important; }
       `}</style>
       <div className={fullPage ? "mx-auto w-full max-w-[1000px]" : undefined}>
         <LanguageSelect model={model} />

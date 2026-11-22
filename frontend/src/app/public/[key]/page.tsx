@@ -164,10 +164,13 @@ export default function PublicFormPage() {
         json={rfi.content.surveyDefinition}
         theme={rfi.content.surveyTheme}
         onComplete={async (data) => {
+          // A form with its own thank-you page keeps showing it; errors are reported on that page by the runner
+          const ownPage = !!rfi.content?.surveyDefinition?.completedHtml;
           try {
             await submitPublicRFI(key, { data });
-            setSubmitted(true);
+            if (!ownPage) setSubmitted(true);
           } catch (e) {
+            if (ownPage) throw e;
             alert(e instanceof Error ? e.message : "Failed to submit. Please try again.");
           }
         }}
