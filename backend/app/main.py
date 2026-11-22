@@ -11,6 +11,7 @@ from app import crm_models  # noqa: F401  (registers Call Center tables before c
 from app.crm_logic import link_unlinked_submissions, seed_courses
 from app.routers import rfis, workspaces, auth, submissions, orgs, admin_db, analytics, admin_audit, admin_backups, images, crm, notifications
 from app.seed_images import seed_images
+from app.starter_templates import backfill_starter_templates
 
 
 MIGRATIONS = [
@@ -32,6 +33,7 @@ MIGRATIONS = [
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_rfi_user BOOLEAN NOT NULL DEFAULT TRUE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_call_center_user BOOLEAN NOT NULL DEFAULT TRUE",
     "ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS is_example BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS templates_seeded BOOLEAN NOT NULL DEFAULT FALSE",
 ]
 
 
@@ -51,6 +53,9 @@ async def lifespan(app: FastAPI):
         linked = await link_unlinked_submissions(db)
         if linked:
             print(f"Call Center: linked {linked} existing RFI responses to contacts")
+        seeded = await backfill_starter_templates(db)
+        if seeded:
+            print(f"Starter templates: added to {seeded} RFI account(s)")
     yield
 
 

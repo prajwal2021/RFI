@@ -14,41 +14,63 @@ import {
 } from "@/lib/crm";
 import { formatValue } from "@/lib/submission-fields";
 import { btn, Card, Empty, ErrorBox, FieldLabel, HelpTip, input, JourneyBadge, Modal, OptSelect, Path, textarea, Toast, useMeta } from "@/components/crm/ui";
-import { WorkDrawer, WorkItemDialog, WorkPreset, WorkRow, WorkTableHead } from "@/components/crm/dialogs";
+import { MoreMenu, SendRfiDialog, WorkDrawer, WorkItemDialog, WorkPreset } from "@/components/crm/dialogs";
 
 const CHANNEL_ICON: Record<string, JSX.Element> = {
   call: <PhoneCall className="h-3.5 w-3.5" />, voicemail: <Phone className="h-3.5 w-3.5" />, email: <Mail className="h-3.5 w-3.5" />,
   sms: <MessageSquare className="h-3.5 w-3.5" />, note: <StickyNote className="h-3.5 w-3.5" />,
 };
 
-// ───────────────────────── Log activity composer ─────────────────────────
+// ───────────────────────── Log a call (guided) ─────────────────────────
 
-function LogActivity({ meta, data, onSaved }: { meta: Meta; data: Contact360; onSaved: () => void }) {
+const MAIN_CHANNELS = ["call", "voicemail", "email", "sms", "note"];
+const NOT_REACHED = ["no_answer", "left_voicemail", "busy", "wrong_number"];
+// The outcome suggests the next step, so most calls need only a few clicks.
+const NEXT_FOR_OUTCOME: Record<string, string> = { callback_requested: "callback", follow_up: "callback", sent_info: "rfi", no_answer: "callback", left_voicemail: "callback" };
+
+function LogActivity({ meta, data, onSaved }: { meta: Meta; data: Contact360; onSaved: (msg: string) => void }) {
   const c = data.contact;
   const blank = {
     channel: "call", direction: "inbound", outcome: "", reason: "", course_id: "", subject: "", notes: "", duration_minutes: "",
-    on_behalf_of_id: "", callback_at: "",
+    on_behalf_of_id: "", callback_at: "", next: "none", handoff_reason: "send_rfi", handoff_note: "",
   };
   const [f, setF] = useState<Record<string, string>>(blank);
+  const [more, setMore] = useState(false);
+  const [nextTouched, setNextTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
   const isNote = f.channel === "note";
+  const rfiAsks = data.work_items.filter((w) => w.kind === "handoff" && w.team === "call_center" && !["done", "cancelled"].includes(w.status));
+  const rfiOpen = data.work_items.some((w) => w.kind === "handoff" && w.team === "rfi" && !["done", "cancelled"].includes(w.status));
+
+  const pickOutcome = (v: string) => {
+    setF((p) => ({ ...p, outcome: v, direction: NOT_REACHED.includes(v) ? "outbound" : p.direction, next: nextTouched ? p.next : NEXT_FOR_OUTCOME[v] || "none" }));
+  };
 
   const save = async () => {
-    if (!isNote && !f.outcome) return setError("Pick an outcome so reports stay accurate");
-    if (!f.subject.trim() && !f.notes.trim()) return setError("Add a subject or notes");
+    if (!isNote && !f.outcome) return setError("Choose how the call went.");
+    if (!f.notes.trim() && !f.subject.trim()) return setError("Add a short note about what was said.");
+    if (!isNote && f.next === "callback" && !f.callback_at) return setError("Pick a date and time for the callback.");
     setBusy(true);
     setError(null);
+    const next = isNote ? "none" : f.next;
     try {
-      await logInteraction(c.id, {
+      const reasonLabel = f.reason ? labelOf(meta.reasons, f.reason) : "";
+      const out: any = await logInteraction(c.id, {
         channel: f.channel, direction: isNote ? "internal" : f.direction, outcome: isNote ? null : f.outcome || null,
-        reason: f.reason || null, course_id: f.course_id || null, subject: f.subject, notes: f.notes,
+        reason: f.reason || null, course_id: f.course_id || null, subject: f.subject.trim() || reasonLabel, notes: f.notes,
         duration_minutes: f.duration_minutes ? Number(f.duration_minutes) : null, on_behalf_of_id: f.on_behalf_of_id || null,
-        callback_at: f.callback_at ? new Date(f.callback_at).toISOString() : null,
+        callback_at: next === "callback" && f.callback_at ? new Date(f.callback_at).toISOString() : null,
+        send_to_rfi: next === "rfi", handoff_reason: next === "rfi" ? f.handoff_reason : null, handoff_note: next === "rfi" ? f.handoff_note : "",
       });
       setF(blank);
-      onSaved();
+      setMore(false);
+      setNextTouched(false);
+      onSaved(
+        next === "rfi" ? (out?.handoff_number ? `Saved and sent to the RFI team (#${out.handoff_number})` : "Saved; note added to the RFI team's open request")
+          : next === "callback" ? "Saved; the callback is in your work list" : isNote ? "Note saved" : "Call logged"
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save");
     } finally {
@@ -56,64 +78,141 @@ function LogActivity({ meta, data, onSaved }: { meta: Meta; data: Contact360; on
     }
   };
 
+  const chip = (on: boolean) =>
+    `inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-[12px] font-medium transition ${on ? "bg-[#1b5038] border-[#1b5038] text-white shadow-sm" : "bg-white border-[#e2d7c0] text-[#4f483d] hover:border-[#1b5038] hover:text-[#1b5038]"}`;
+  const step = (n: number, label: string) => (
+    <div className="flex items-center gap-2 mb-1.5">
+      <span className="h-5 w-5 rounded-full bg-[#7c1fff] text-white text-[11px] font-bold flex items-center justify-center shrink-0">{n}</span>
+      <span className="text-[13px] font-semibold text-[#1f2a22]">{label}</span>
+    </div>
+  );
+  const reached = meta.outcomes.filter((o) => !NOT_REACHED.includes(o.value));
+  const notReached = meta.outcomes.filter((o) => NOT_REACHED.includes(o.value));
+  const nextOpts = [
+    { v: "none", label: "Nothing else", hint: "All done for now" },
+    { v: "callback", label: "Call them back", hint: "Adds a callback to your work" },
+    { v: "rfi", label: "Send to the RFI team", hint: rfiOpen ? "Adds a note to their open request" : "Lands in the RFI Team queue" },
+  ];
+
   return (
-    <Card title="Log activity" icon={<PhoneCall className="h-4 w-4" />} iconColor="#2f7a54"
-      help="Record every conversation while you are on the call. The outcome drives the person's journey status and reports.">
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-1">
-          {meta.channels.map((ch) => (
-            <button key={ch.value} title={ch.description} onClick={() => set("channel", ch.value)}
-              className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-full border text-[12px] ${f.channel === ch.value ? "bg-[#1b5038] border-[#1b5038] text-white" : "bg-white border-[#d3c6aa] text-[#4f483d] hover:bg-[#f5efe3]"}`}>
-              {CHANNEL_ICON[ch.value]}{ch.label}
-            </button>
-          ))}
+    <Card title="Log this conversation" icon={<PhoneCall className="h-4 w-4" />} iconColor="#2f7a54"
+      help="Fill this in while you talk. The outcome updates the person's status for both teams, and the next step creates the follow-up for you.">
+      <div className="space-y-4">
+        {rfiAsks.map((w) => (
+          <div key={w.id} className="rounded-lg border border-[#cfe3d6] bg-[#eef5f0] px-3 py-2 text-[12px] text-[#163f2d]">
+            <b>The RFI team asked for this call</b> (#{w.number}: {w.title}). When you log a call where you reach them, the request closes and the RFI team is told.
+          </div>
+        ))}
+        <div>
+          {step(1, "How did you talk?")}
+          <div className="flex flex-wrap gap-1.5">
+            {meta.channels.filter((ch) => MAIN_CHANNELS.includes(ch.value) || ch.value === f.channel).map((ch) => (
+              <button key={ch.value} type="button" title={ch.description} onClick={() => set("channel", ch.value)} className={chip(f.channel === ch.value)}>
+                {CHANNEL_ICON[ch.value]}{ch.label}
+              </button>
+            ))}
+            <select aria-label="Other channel" value="" onChange={(e) => e.target.value && set("channel", e.target.value)} className="h-8 rounded-full border border-[#e2d7c0] bg-white px-2 text-[12px] text-[#4f483d]">
+              <option value="">Other…</option>
+              {meta.channels.filter((ch) => !MAIN_CHANNELS.includes(ch.value)).map((ch) => <option key={ch.value} value={ch.value}>{ch.label}</option>)}
+            </select>
+          </div>
+          {!isNote && (
+            <div className="mt-2 inline-flex rounded-lg border border-[#e2d7c0] bg-[#fbf8f2] p-0.5 text-[12px]">
+              {[["inbound", "They contacted us"], ["outbound", "We contacted them"]].map(([v, l]) => (
+                <button key={v} type="button" onClick={() => set("direction", v)} className={`h-7 px-3 rounded-md font-medium ${f.direction === v ? "bg-white text-[#1b5038] shadow-sm" : "text-[#6f6654]"}`}>{l}</button>
+              ))}
+            </div>
+          )}
         </div>
-        <ErrorBox text={error} />
+
         {!isNote && (
-          <div className="grid sm:grid-cols-2 gap-3">
-            <OptSelect label="Direction" opts={meta.directions.filter((d) => d.value !== "internal")} value={f.direction} onChange={(v) => set("direction", v)} />
-            <OptSelect label="Outcome" required opts={meta.outcomes} value={f.outcome} onChange={(v) => set("outcome", v)} allowEmpty emptyLabel="Choose the outcome…" />
+          <div>
+            {step(2, "How did it go?")}
+            <select value={f.outcome} onChange={(e) => pickOutcome(e.target.value)} className={input} aria-label="Outcome">
+              <option value="">Choose the outcome…</option>
+              <optgroup label="We spoke with them">{reached.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+              <optgroup label="We did not reach them">{notReached.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>
+            </select>
+            {f.outcome && <p className="mt-1 text-[11px] text-[#6f6654]">{meta.outcomes.find((o) => o.value === f.outcome)?.description}</p>}
           </div>
         )}
-        <div className="grid sm:grid-cols-2 gap-3">
-          <OptSelect label="Reason" opts={meta.reasons} value={f.reason} onChange={(v) => set("reason", v)} allowEmpty emptyLabel="Why did they call?" />
-          <label className="block">
-            <FieldLabel label="Course discussed" help="Adds a course interest to the person automatically (waitlist if it is coming soon)." />
-            <select value={f.course_id} onChange={(e) => set("course_id", e.target.value)} className={input}>
-              <option value="">—</option>
+
+        <div>
+          {step(isNote ? 2 : 3, "What was it about?")}
+          <div className="grid sm:grid-cols-2 gap-2 mb-2">
+            <select value={f.reason} onChange={(e) => set("reason", e.target.value)} className={input} aria-label="Reason">
+              <option value="">Reason (optional)</option>
+              {meta.reasons.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+            <select value={f.course_id} onChange={(e) => set("course_id", e.target.value)} className={input} aria-label="Course discussed" title="Adds a course interest to the person automatically">
+              <option value="">Course discussed (optional)</option>
               {meta.courses.map((co) => <option key={co.id} value={co.id}>{co.name}{co.status === "coming_soon" ? " (coming soon)" : co.status === "closed" ? " (closed)" : ""}</option>)}
             </select>
-          </label>
+          </div>
+          <textarea value={f.notes} onChange={(e) => set("notes", e.target.value)} rows={3} className={textarea} aria-label="Notes"
+            placeholder="What they asked, what you told them, anything the next person should know…" />
         </div>
-        <label className="block">
-          <FieldLabel label="Subject" />
-          <input value={f.subject} onChange={(e) => set("subject", e.target.value)} className={input} placeholder="e.g. Asked about AI course start date and cost" />
-        </label>
-        <label className="block">
-          <FieldLabel label="Notes" help="What they asked, what you told them, and what happens next." />
-          <textarea value={f.notes} onChange={(e) => set("notes", e.target.value)} rows={4} className={textarea} />
-        </label>
+
         {!isNote && (
-          <div className="grid sm:grid-cols-3 gap-3">
-            <label className="block">
-              <FieldLabel label="Minutes" />
-              <input type="number" min={0} value={f.duration_minutes} onChange={(e) => set("duration_minutes", e.target.value)} className={input} />
-            </label>
-            <label className="block">
-              <FieldLabel label="Calling on behalf of" help="Parent or employer calling about someone linked to this record. The call is also logged on that person." />
-              <select value={f.on_behalf_of_id} onChange={(e) => set("on_behalf_of_id", e.target.value)} className={input}>
-                <option value="">— themselves —</option>
-                {data.relations.map((r) => <option key={r.contact.id} value={r.contact.id}>{r.contact.name}</option>)}
-              </select>
-            </label>
-            <label className="block">
-              <FieldLabel label="Schedule callback" help="Creates a callback task assigned to you at this time." />
-              <input type="datetime-local" value={f.callback_at} onChange={(e) => set("callback_at", e.target.value)} className={input} />
-            </label>
+          <div>
+            {step(4, "What happens next?")}
+            <div className="grid sm:grid-cols-3 gap-2">
+              {nextOpts.map((o) => (
+                <button key={o.v} type="button" onClick={() => { set("next", o.v); setNextTouched(true); }}
+                  className={`text-left rounded-lg border px-3 py-2 transition ${f.next === o.v ? "border-[#7c1fff] bg-[#f4edff] ring-1 ring-[#7c1fff]" : "border-[#e2d7c0] bg-white hover:border-[#d3c6aa]"}`}>
+                  <div className="text-[13px] font-semibold text-[#1f2a22]">{o.label}</div>
+                  <div className="text-[11px] text-[#6f6654]">{o.hint}</div>
+                </button>
+              ))}
+            </div>
+            {f.next === "callback" && (
+              <label className="block mt-2 max-w-xs">
+                <FieldLabel label="Call back on" required />
+                <input type="datetime-local" value={f.callback_at} onChange={(e) => set("callback_at", e.target.value)} className={input} />
+              </label>
+            )}
+            {f.next === "rfi" && (
+              <div className="mt-2 grid sm:grid-cols-[230px_1fr] gap-2">
+                <select value={f.handoff_reason} onChange={(e) => set("handoff_reason", e.target.value)} className={input} aria-label="What should the RFI team do?">
+                  {meta.handoff_reasons.filter((r) => r.value !== "call_request").map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+                <input value={f.handoff_note} onChange={(e) => set("handoff_note", e.target.value)} className={input} placeholder="Note for the RFI team, e.g. which form to send (optional)" />
+              </div>
+            )}
           </div>
         )}
-        <div className="flex justify-end">
-          <button onClick={save} disabled={busy} className={btn.brand}>{busy ? "Saving…" : isNote ? "Save note" : "Log activity"}</button>
+
+        <button type="button" onClick={() => setMore(!more)} className="text-[12px] font-medium text-[#1b5038] hover:underline">
+          {more ? "Hide extra details" : "+ Extra details (subject, minutes, calling on behalf of someone)"}
+        </button>
+        {more && (
+          <div className="grid sm:grid-cols-3 gap-3 rounded-lg border border-[#ebe2d0] bg-[#fbf8f2] p-3">
+            <label className="block">
+              <FieldLabel label="Subject" help="A one-line summary. Leave blank to use the reason." />
+              <input value={f.subject} onChange={(e) => set("subject", e.target.value)} className={input} />
+            </label>
+            {!isNote && (
+              <label className="block">
+                <FieldLabel label="Minutes" />
+                <input type="number" min={0} value={f.duration_minutes} onChange={(e) => set("duration_minutes", e.target.value)} className={input} />
+              </label>
+            )}
+            {!isNote && (
+              <label className="block">
+                <FieldLabel label="Calling on behalf of" help="A parent or employer calling about someone linked to this record. The call is also logged on that person." />
+                <select value={f.on_behalf_of_id} onChange={(e) => set("on_behalf_of_id", e.target.value)} className={input}>
+                  <option value="">Themselves</option>
+                  {data.relations.map((r) => <option key={r.contact.id} value={r.contact.id}>{r.contact.name}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
+
+        <ErrorBox text={error} />
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#f5efe3]">
+          <span className="text-[11px] text-[#6f6654] mr-auto">Saved to {c.name}&apos;s timeline, visible to both teams.</span>
+          <button onClick={save} disabled={busy} className={`${btn.brand} h-9 px-5`}>{busy ? "Saving…" : isNote ? "Save note" : "Save"}</button>
         </div>
       </div>
     </Card>
@@ -310,8 +409,7 @@ function EditDialog({ meta, c, onSaved, onClose }: { meta: Meta; c: Contact; onS
         <div className="grid sm:grid-cols-4 gap-3">{txt("street", "Street")}{txt("city", "City")}{txt("state", "State")}{txt("zip", "ZIP")}</div>
         <h3 className="text-[13px] font-bold border-b border-[#ebe2d0] pb-1">Classification</h3>
         <div className="grid sm:grid-cols-2 gap-3">
-          <OptSelect label="Contact type" opts={meta.contact_types} value={f.contact_type} onChange={(v) => set("contact_type", v)} />
-          <OptSelect label="Lifecycle" opts={meta.lifecycle} value={f.lifecycle} onChange={(v) => set("lifecycle", v)} help="Moves forward automatically when a course interest becomes Applied or Enrolled." />
+          <OptSelect label="Who are they?" opts={meta.contact_types} value={f.contact_type} onChange={(v) => set("contact_type", v)} />
           {txt("organization_name", "Organization / employer")}{txt("job_title", "Job title")}
         </div>
         <h3 className="text-[13px] font-bold border-b border-[#ebe2d0] pb-1">Consent</h3>
@@ -409,6 +507,13 @@ export default function ContactPage() {
     getContact(id).then(setData).catch((e) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
+  // Arriving from "Take a call" (?log=1): jump straight to the call form
+  const [jumped, setJumped] = useState(false);
+  useEffect(() => {
+    if (!data || jumped || new URLSearchParams(window.location.search).get("log") !== "1") return;
+    setJumped(true);
+    setTimeout(() => document.getElementById("log-activity")?.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
+  }, [data, jumped]);
 
   if (error) return <div className="max-w-3xl mx-auto"><ErrorBox text={error} /><Link href="/crm/contacts" className="text-[13px] text-[#1b5038]">Back to contacts</Link></div>;
   if (!data || !meta) return <div className="p-6 text-[13px] text-[#6f6654]">{metaError || "Loading…"}</div>;
@@ -459,44 +564,44 @@ export default function ContactPage() {
         <div className="flex flex-wrap items-start gap-3 p-4">
           <span className="h-12 w-12 rounded bg-[#7c1fff] text-white text-xl font-bold flex items-center justify-center shrink-0">{(c.name[0] || "?").toUpperCase()}</span>
           <div className="min-w-0 flex-1">
-            <div className="text-[12px] text-[#4f483d]">{labelOf(meta.contact_types, c.contact_type)} · {labelOf(meta.lifecycle, c.lifecycle)}{c.source ? ` · source: ${c.source.replace("_", " ")}` : ""}</div>
+            <div className="text-[12px] text-[#4f483d]">{labelOf(meta.contact_types, c.contact_type)}{c.source ? ` · source: ${c.source.replace("_", " ")}` : ""}</div>
             <h1 className="text-[20px] font-bold leading-tight flex flex-wrap items-center gap-2">
-              {c.name} <JourneyBadge value={c.journey} label={c.journey_label} help={c.journey_help} /> <HelpTip text={c.journey_help} />
+              {c.name} <JourneyBadge value={c.journey} label={c.journey_label} help={c.journey_help} />
             </h1>
-            {!rfiOnly && data.interests.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
-                {data.interests.map((it) => (
-                  <label key={it.id} className="inline-flex items-center gap-1.5 text-[12px] text-[#4f483d]" title="Change where this person is for this course">
-                    <span className="font-semibold">{it.course}</span>
-                    <select value={it.stage} onChange={(e) => changeStage(it, e.target.value)} className="h-7 rounded-lg border border-[#d3c6aa] bg-white px-1.5 text-[12px] font-medium text-[#1f2a22]">
-                      {meta.interest_stages.map((st) => <option key={st.value} value={st.value}>{st.label}</option>)}
-                    </select>
-                  </label>
-                ))}
-              </div>
-            )}
+            {c.journey_help && <p className="mt-1 text-[12px] text-[#4f483d] max-w-2xl">{c.journey_help}</p>}
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {!rfiOnly && <button onClick={() => document.getElementById("log-activity")?.scrollIntoView({ behavior: "smooth" })} className={btn.brand}><PhoneCall className="h-3.5 w-3.5" /> Log a Call</button>}
-            <button onClick={() => work({ kind: "task" })} className={btn.neutral}><ListTodo className="h-3.5 w-3.5" /> New Task</button>
-            {!rfiOnly && <button onClick={() => work({ kind: "callback", title: `Call back ${c.name}` })} className={btn.neutral}><CalendarClock className="h-3.5 w-3.5" /> Callback</button>}
-            {!rfiOnly && <button onClick={() => work({ kind: "case" })} className={btn.neutral}><Briefcase className="h-3.5 w-3.5" /> New Case</button>}
+          <div className="flex flex-wrap items-center gap-1.5">
             {rfiOnly ? (
-              <button onClick={() => work({ kind: "handoff", team: "call_center", category: "call_request", title: `Please call ${c.name}` })} className={btn.brand} title="Ask the Call Center to phone this person">
-                <Share2 className="h-3.5 w-3.5" /> Send to Call Center
-              </button>
+              <>
+                <button onClick={() => setDialog("rfi")} disabled={c.do_not_contact} className={btn.brand} title="Create a personal form link for this person; their record updates when they open and submit it">
+                  <Send className="h-3.5 w-3.5" /> Send RFI link
+                </button>
+                <button onClick={() => work({ kind: "handoff", team: "call_center", category: "call_request", title: `Please call ${c.name}` })} disabled={c.do_not_contact} className={btn.neutral} title="Ask the Call Center to phone this person">
+                  <Share2 className="h-3.5 w-3.5" /> Ask Call Center to call
+                </button>
+              </>
             ) : (
-              <button onClick={() => work({ kind: "handoff", team: "rfi", category: "send_rfi", title: `RFI team: ${c.name}` })} className={btn.neutral} title="Pass this person to the RFI team with a reason and notes">
-                <Share2 className="h-3.5 w-3.5" /> Send to RFI Team
-              </button>
+              <>
+                <button onClick={() => document.getElementById("log-activity")?.scrollIntoView({ behavior: "smooth", block: "start" })} className={btn.brand}><PhoneCall className="h-3.5 w-3.5" /> Log a call</button>
+                <button onClick={() => work({ kind: "handoff", team: "rfi", category: "send_rfi", title: `Send an RFI to ${c.name}` })} className={btn.neutral} title="Pass this person to the RFI team with a reason and a note">
+                  <Share2 className="h-3.5 w-3.5" /> Send to RFI team
+                </button>
+                <button onClick={() => work({ kind: "callback", title: `Call back ${c.name}` })} className={btn.neutral}><CalendarClock className="h-3.5 w-3.5" /> Callback</button>
+              </>
             )}
-            <button onClick={() => setDialog("edit")} className={btn.neutral}><Pencil className="h-3.5 w-3.5" /> Edit</button>
-            {!rfiOnly && <button onClick={() => setDialog("merge")} className={btn.icon} title="Merge a duplicate into this record"><GitMerge className="h-4 w-4" /></button>}
-            {meta.me.is_admin && (
-              <button onClick={async () => { if (!confirm(`Delete ${c.name} and all their history? This cannot be undone.`)) return; try { await deleteContact(c.id); router.push("/crm/contacts"); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); } }} className={btn.icon} title="Delete contact (admin)">
-                <Trash2 className="h-4 w-4 text-[#ba0517]" />
-              </button>
-            )}
+            <MoreMenu items={[
+              { label: "New task", icon: <ListTodo className="h-3.5 w-3.5" />, onClick: () => work({ kind: "task" }) },
+              ...(!rfiOnly ? [
+                { label: "New case (ticket)", icon: <Briefcase className="h-3.5 w-3.5" />, onClick: () => work({ kind: "case" }) },
+                { label: "Send RFI link myself", icon: <Send className="h-3.5 w-3.5" />, onClick: () => setDialog("rfi"), disabled: c.do_not_contact },
+              ] : []),
+              { label: "Edit details", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => setDialog("edit") },
+              ...(!rfiOnly ? [{ label: "Merge a duplicate", icon: <GitMerge className="h-3.5 w-3.5" />, onClick: () => setDialog("merge") }] : []),
+              ...(meta.me.is_admin ? [{
+                label: "Delete contact", danger: true, icon: <Trash2 className="h-3.5 w-3.5" />,
+                onClick: async () => { if (!confirm(`Delete ${c.name} and all their history? This cannot be undone.`)) return; try { await deleteContact(c.id); router.push("/crm/contacts"); } catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); } },
+              }] : []),
+            ]} />
           </div>
         </div>
         <div className="flex flex-wrap gap-x-8 gap-y-2 px-4 pb-4">
@@ -561,7 +666,7 @@ export default function ContactPage() {
 
         {/* Middle: activity */}
         <div className="space-y-3 min-w-0">
-          {!rfiOnly && <div id="log-activity"><LogActivity meta={meta} data={data} onSaved={() => done("Activity logged")} /></div>}
+          {!rfiOnly && <div id="log-activity" className="scroll-mt-32"><LogActivity meta={meta} data={data} onSaved={(m) => done(m)} /></div>}
           <Timeline meta={meta} data={data} />
         </div>
 
@@ -589,9 +694,23 @@ export default function ContactPage() {
           <Card title={`Open work (${openItems.length})`} icon={<ListTodo className="h-4 w-4" />} iconColor="#7c1fff" bodyClass="p-0"
             help="Tasks, callbacks, cases and handoffs for this person that are not finished.">
             {openItems.length === 0 ? <Empty text="Nothing open." /> : (
-              <div className="overflow-x-auto"><table className="w-full"><WorkTableHead showContact={false} /><tbody>
-                {openItems.map((w) => <WorkRow key={w.id} meta={meta} w={w} showContact={false} onOpen={() => setOpenWork(w.id)} />)}
-              </tbody></table></div>
+              <ul className="divide-y divide-[#f5efe3]">
+                {openItems.map((w) => (
+                  <li key={w.id}>
+                    <button onClick={() => setOpenWork(w.id)} className="w-full text-left px-4 py-2.5 hover:bg-[#eef5f0]">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[13px] font-medium text-[#1b5038] leading-snug">{w.title}</span>
+                        <span className="text-[11px] text-[#6f6654] tabular-nums shrink-0">#{w.number}</span>
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-[#6f6654]">
+                        <span>{labelOf(meta.work_kinds, w.kind)} · {labelOf(meta.teams, w.team)}</span>
+                        <span>{w.owner_email || "In the queue"}</span>
+                        {w.due_at && <span className={w.overdue ? "text-[#ba0517] font-semibold" : ""}>due {format(new Date(w.due_at), "MMM d")}{w.overdue ? " (overdue)" : ""}</span>}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
             {closedItems.length > 0 && <div className="px-3 py-2 text-[12px] text-[#6f6654] border-t border-[#ebe2d0]">{closedItems.length} closed item(s) are on the timeline.</div>}
           </Card>
@@ -643,6 +762,7 @@ export default function ContactPage() {
       </div>
 
       {/* dialogs */}
+      {dialog === "rfi" && <SendRfiDialog contact={c} onClose={() => { setDialog(null); load(); }} onSent={(msg) => setToast(msg)} />}
       {dialog === "edit" && <EditDialog meta={meta} c={c} onClose={() => setDialog(null)} onSaved={() => done("Saved")} />}
       {workPreset && <WorkItemDialog meta={meta} preset={workPreset} onClose={() => setWorkPreset(null)} onCreated={(w) => done(`${labelOf(meta.work_kinds, w.kind)} #${w.number} created`)} />}
       {openWork && <WorkDrawer meta={meta} id={openWork} onClose={() => setOpenWork(null)} onChanged={load} />}

@@ -11,6 +11,7 @@ from app.audit import record
 from app.auth import hash_password, require_admin
 from app.database import get_db
 from app.models import RFI, Organisation, User, Workspace
+from app.starter_templates import give_starter_templates
 from app.schemas import AdminResetPasswordIn, OrgCreate, OrgOut, OrgUserCreate, UserAccessPatch, UserOut
 
 router = APIRouter(prefix="/api/orgs", tags=["organisations"], dependencies=[Depends(require_admin)])
@@ -142,6 +143,7 @@ async def add_user(
     db.add(user)
     try:
         await db.flush()
+        await give_starter_templates(db, user)
         record(db, admin, "user_added", "user", user.id, user.email, {"org": org.name, "is_admin": user.is_admin, "rfi_user": user.is_rfi_user, "call_center_user": user.is_call_center_user})
         await db.commit()
     except IntegrityError:
@@ -183,6 +185,7 @@ async def change_user_access(
         user.is_admin = body.is_admin
     user.is_rfi_user = rfi
     user.is_call_center_user = cc
+    await give_starter_templates(db, user)
     record(db, admin, "user_access_changed", "user", user.id, user.email, {"rfi_user": rfi, "call_center_user": cc, "is_admin": user.is_admin})
     await db.commit()
     await db.refresh(user)

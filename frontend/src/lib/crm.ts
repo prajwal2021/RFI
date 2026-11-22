@@ -219,7 +219,7 @@ export const updateInterest = (iid: string, data: { stage?: string; lost_reason?
 export const deleteInterest = (iid: string) => req<void>(`/interests/${iid}`, { method: "DELETE" });
 export const sendableRfis = () => req<{ id: string; subject: string; publish_key: string }[]>("/rfis");
 export const createInvitation = (id: string, rfi_id: string, channel = "link") =>
-  req<{ id: string; token: string; path: string }>(`/contacts/${id}/invitations`, { method: "POST", body: body({ rfi_id, channel }) });
+  req<{ id: string; token: string; path: string; closed_requests?: number[] }>(`/contacts/${id}/invitations`, { method: "POST", body: body({ rfi_id, channel }) });
 
 export const listWork = (p: Record<string, string>) => req<WorkItem[]>(`/work?${new URLSearchParams(p).toString()}`);
 export const getWork = (id: string) => req<WorkItem>(`/work/${id}`);

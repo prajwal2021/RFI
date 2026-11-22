@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Eye, Pencil, Trash2, Search, Globe, Copy, FolderPlus, Folder, Plus, X, Lock, Building2, Inbox,
+  Eye, Pencil, Trash2, Search, Globe, Copy, FolderPlus, Folder, Plus, X, Lock, Building2, Inbox, Sparkles,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -21,19 +21,12 @@ import { isRfiDrag, readRfiDrag, startRfiDrag } from "@/lib/dnd";
 import RfiThumbnail from "@/components/rfi-thumbnail";
 import ResponsesPanel from "@/components/responses-panel";
 
-const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> = {
-  draft: "draft",
-  open: "open",
-  answered: "answered",
-  closed: "closed",
-};
-
 type Tab = "overview" | "workspaces" | "rfis" | "responses";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "workspaces", label: "Workspaces" },
-  { key: "rfis", label: "All RFIs" },
+  { key: "rfis", label: "Forms" },
   { key: "responses", label: "Responses" },
 ];
 
@@ -46,8 +39,8 @@ export default function DashboardPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [publishedOnly, setPublishedOnly] = useState(false);
+  const [filterStatus] = useState<string>("");
+  const [pubFilter, setPubFilter] = useState<"" | "live" | "draft">("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showNewWs, setShowNewWs] = useState(false);
   const [newWsName, setNewWsName] = useState("");
@@ -80,7 +73,7 @@ export default function DashboardPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this RFI?")) return;
+    if (!confirm("Delete this form and all its responses? This cannot be undone.")) return;
     await deleteRFI(id);
     setRfis(rfis.filter((r) => r.id !== id));
     setSidebarKey((k) => k + 1);
@@ -129,7 +122,7 @@ export default function DashboardPage() {
       setTimeout(() => setCopiedId(null), 2000);
       setSidebarKey((k) => k + 1);
     } catch {
-      alert("Failed to publish. Make sure the RFI has content.");
+      alert("Could not publish. Open the form and add at least one question first.");
     }
   }
 
@@ -150,7 +143,7 @@ export default function DashboardPage() {
 
   const filteredRFIs = rfis.filter(
     (rfi) =>
-      (!publishedOnly || rfi.is_published) &&
+      (!pubFilter || (pubFilter === "live") === !!rfi.is_published) &&
       (rfi.subject.toLowerCase().includes(search.toLowerCase()) ||
         rfi.created_by.toLowerCase().includes(search.toLowerCase()))
   );
@@ -159,8 +152,7 @@ export default function DashboardPage() {
   const canEdit = !me || me.is_admin || me.is_rfi_user !== false;
 
   function openForms(published: boolean) {
-    setFilterStatus("");
-    setPublishedOnly(published);
+    setPubFilter(published ? "live" : "");
     setSearch("");
     setTab("rfis");
   }
@@ -211,7 +203,7 @@ export default function DashboardPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {showNewWs ? (
-                  <Card className="border-2 border-blue-200 bg-blue-50/30">
+                  <Card className="border-2 border-volt-200 bg-volt-50/40">
                     <CardContent className="py-5 px-4">
                       <Input
                         value={newWsName}
@@ -225,7 +217,7 @@ export default function DashboardPage() {
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         <button
                           onClick={() => setNewWsVisibility("private")}
-                          className={`flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left ${newWsVisibility === "private" ? "border-blue-500 bg-white ring-1 ring-blue-500" : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                          className={`flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left ${newWsVisibility === "private" ? "border-volt-500 bg-white ring-1 ring-volt-500" : "border-sand-300 bg-white hover:bg-sand-50"}`}
                         >
                           <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
                             <Lock className="h-3.5 w-3.5" /> Private
@@ -235,7 +227,7 @@ export default function DashboardPage() {
                         <button
                           onClick={() => hasOrg && setNewWsVisibility("org")}
                           disabled={!hasOrg}
-                          className={`flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed ${newWsVisibility === "org" ? "border-blue-500 bg-white ring-1 ring-blue-500" : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                          className={`flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed ${newWsVisibility === "org" ? "border-volt-500 bg-white ring-1 ring-volt-500" : "border-sand-300 bg-white hover:bg-sand-50"}`}
                         >
                           <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
                             <Building2 className="h-3.5 w-3.5" /> Organisation
@@ -264,12 +256,13 @@ export default function DashboardPage() {
                   </Card>
                 ) : !canEdit ? null : (
                   <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow border-2 border-dashed border-gray-300 hover:border-blue-400"
+                    className="cursor-pointer hover:shadow-md transition border-2 border-dashed border-sand-300 hover:border-volt-400 hover:bg-white"
                     onClick={() => setShowNewWs(true)}
                   >
                     <CardContent className="flex flex-col items-center justify-center py-10">
-                      <FolderPlus className="h-10 w-10 text-gray-400 mb-3" />
-                      <h3 className="font-medium text-gray-600">Create Workspace</h3>
+                      <FolderPlus className="h-10 w-10 text-forest-300 mb-3" />
+                      <h3 className="font-semibold text-forest-800">New workspace</h3>
+                      <p className="text-xs text-forest-700/60 mt-0.5">Group forms by program or term</p>
                     </CardContent>
                   </Card>
                 )}
@@ -277,7 +270,7 @@ export default function DashboardPage() {
                 {workspaces.map((ws) => (
                   <Card
                     key={ws.id}
-                    className={`cursor-pointer hover:shadow-md transition-all group ${dragOverWs === ws.id ? "ring-2 ring-indigo-400 bg-indigo-50/60 scale-[1.02]" : ""}`}
+                    className={`cursor-pointer hover:shadow-md transition-all group ${dragOverWs === ws.id ? "ring-2 ring-volt-400 bg-volt-50/60 scale-[1.02]" : ""}`}
                     onClick={() => router.push(`/workspace/${ws.id}`)}
                     onDragOver={(e) => {
                       if (!isRfiDrag(e)) return;
@@ -302,14 +295,14 @@ export default function DashboardPage() {
                   >
                     <CardContent className="py-5 px-4">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                          <Folder className="h-5 w-5 text-indigo-600" />
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${ws.name === "Starter templates" ? "bg-volt-100" : "bg-forest-100"}`}>
+                          {ws.name === "Starter templates" ? <Sparkles className="h-5 w-5 text-volt-600" /> : <Folder className="h-5 w-5 text-forest-700" />}
                         </div>
                         <div className="flex items-center gap-1">
                           {ws.is_example && <Badge variant="draft" className="text-xs bg-amber-100 text-amber-700">Example</Badge>}
                           <Badge
                             variant="draft"
-                            className={`text-xs ${ws.visibility === "org" ? "bg-sky-100 text-sky-700" : "bg-gray-100 text-gray-600"}`}
+                            className={`text-xs ${ws.visibility === "org" ? "bg-forest-100 text-forest-800" : "bg-sand-100 text-forest-800/70"}`}
                           >
                             {ws.visibility === "org" ? (
                               <><Building2 className="h-3 w-3 mr-1" /> Org</>
@@ -332,9 +325,10 @@ export default function DashboardPage() {
                           )}
                         </div>
                       </div>
-                      <h3 className="font-semibold text-gray-900 mb-1 truncate">{ws.name}</h3>
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        <span>{ws.rfi_count} item{ws.rfi_count !== 1 ? "s" : ""}</span>
+                      <h3 className="font-semibold text-forest-900 mb-1 truncate">{ws.name}</h3>
+                      {ws.description && <p className="text-xs text-forest-800/60 mb-2 line-clamp-2">{ws.description}</p>}
+                      <div className="flex items-center gap-3 text-xs text-forest-800/60">
+                        <span>{ws.rfi_count} form{ws.rfi_count !== 1 ? "s" : ""}</span>
                         <span>{format(new Date(ws.created_at), "MMM d, yyyy")}</span>
                       </div>
                       {ws.visibility === "org" && !ws.is_owner && ws.owner_email && (
@@ -346,7 +340,7 @@ export default function DashboardPage() {
 
                 {workspaces.length === 0 && !showNewWs && !loading && (
                   <div className="col-span-full text-center py-8 text-gray-400 text-sm">
-                    No workspaces yet. Create one to organize your RFIs and forms.
+                    No workspaces yet. Create one to organize your forms.
                   </div>
                 )}
               </div>
@@ -362,26 +356,19 @@ export default function DashboardPage() {
                     <div className="relative flex-1 w-full">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search RFIs..."
+                        placeholder="Search forms by name or author…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-9"
                       />
                     </div>
-                    <div className="flex gap-2">
-                      {["", "draft", "open", "answered", "closed"].map((status) => (
-                        <Button
-                          key={status}
-                          variant={filterStatus === status && !publishedOnly ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => { setFilterStatus(status); setPublishedOnly(false); }}
-                        >
-                          {status || "All"}
-                        </Button>
+                    <div className="inline-flex rounded-lg border border-sand-300 bg-sand-50 p-0.5">
+                      {([["", "All"], ["live", "Live"], ["draft", "Drafts"]] as const).map(([v, l]) => (
+                        <button key={v} onClick={() => setPubFilter(v)}
+                          className={`h-8 px-4 rounded-md text-sm font-medium transition ${pubFilter === v ? "bg-white text-forest-900 shadow-sm" : "text-forest-700/70 hover:text-forest-900"}`}>
+                          {l}
+                        </button>
                       ))}
-                      <Button variant={publishedOnly ? "default" : "outline"} size="sm" onClick={() => { setFilterStatus(""); setPublishedOnly(!publishedOnly); }}>
-                        published
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -389,8 +376,8 @@ export default function DashboardPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">All RFIs</CardTitle>
-                  <CardDescription>Manage and track all your Requests for Information</CardDescription>
+                  <CardTitle className="text-lg">Forms</CardTitle>
+                  <CardDescription>Live forms accept responses at their public link. Drafts are not public yet.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
@@ -398,8 +385,8 @@ export default function DashboardPage() {
                   ) : filteredRFIs.length === 0 ? (
                     <div className="text-center py-12">
                       <Inbox className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-1">No RFIs found</h3>
-                      <p className="text-muted-foreground mb-4">Get started by creating your first form</p>
+                      <h3 className="text-lg font-medium text-foreground mb-1">No forms here</h3>
+                      <p className="text-muted-foreground mb-4">Start from one of your Starter templates (Workspaces tab) or build a new form.</p>
                       {canEdit && (
                         <div className="flex items-center justify-center gap-3">
                           <Button onClick={() => router.push("/surveyjs-clone/new")}>
@@ -424,24 +411,17 @@ export default function DashboardPage() {
                             <div className="flex-1 min-w-0 mr-4">
                               <div className="flex items-center gap-3 mb-1">
                                 <h4 className="font-medium text-foreground truncate">{rfi.subject}</h4>
-                                <Badge variant={STATUS_VARIANT[rfi.status]}>{rfi.status}</Badge>
-                                <Badge variant="draft" className="bg-slate-100 text-slate-600 text-xs max-w-[180px]">
+                                {rfi.is_published ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-forest-100 text-forest-800 px-2 py-0.5 text-xs font-semibold"><Globe className="h-3 w-3" /> Live</span>
+                                ) : (
+                                  <span className="inline-flex items-center rounded-full bg-sand-200 text-forest-800/70 px-2 py-0.5 text-xs font-semibold">Draft</span>
+                                )}
+                                <span className="inline-flex items-center rounded-full bg-sand-100 text-forest-800/70 px-2 py-0.5 text-xs max-w-[180px]">
                                   <Folder className="h-3 w-3 mr-1 shrink-0" />
                                   <span className="truncate">{workspaces.find((w) => w.id === rfi.workspace_id)?.name ?? (rfi.workspace_id ? "Workspace" : "Unfiled")}</span>
-                                </Badge>
-                                {rfi.content?.formDefinition && (
-                                  <Badge variant="draft" className="bg-indigo-100 text-indigo-700 text-xs">SS Form</Badge>
-                                )}
-                                {rfi.content?.surveyDefinition && (
-                                  <Badge variant="draft" className="bg-emerald-100 text-emerald-700 text-xs">SurveyJS</Badge>
-                                )}
+                                </span>
                                 {rfi.is_example && (
                                   <Badge variant="draft" className="bg-amber-100 text-amber-700 text-xs">Example</Badge>
-                                )}
-                                {rfi.is_published && (
-                                  <Badge variant="open" className="bg-green-100 text-green-700 text-xs">
-                                    <Globe className="h-3 w-3 mr-1" /> Live
-                                  </Badge>
                                 )}
                               </div>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -451,16 +431,12 @@ export default function DashboardPage() {
                             </div>
                             <div className="flex items-center gap-1">
                               {rfi.is_published && rfi.publish_key ? (
-                                <Button variant="ghost" size="icon" title="Copy public link" onClick={() => handleCopyLink(rfi)}>
-                                  {copiedId === rfi.id ? (
-                                    <span className="text-xs text-green-600 font-medium">Copied</span>
-                                  ) : (
-                                    <Copy className="h-4 w-4 text-green-600" />
-                                  )}
+                                <Button variant="outline" size="sm" title="Copy the public link" onClick={() => handleCopyLink(rfi)}>
+                                  <Copy className="h-3.5 w-3.5 mr-1.5" />{copiedId === rfi.id ? "Copied" : "Copy link"}
                                 </Button>
                               ) : rfi.content && canEdit && !readOnly ? (
-                                <Button variant="ghost" size="icon" title="Publish" onClick={() => handleQuickPublish(rfi)}>
-                                  <Globe className="h-4 w-4 text-gray-400" />
+                                <Button variant="outline" size="sm" title="Publish and copy the public link" onClick={() => handleQuickPublish(rfi)}>
+                                  <Globe className="h-3.5 w-3.5 mr-1.5" />Publish
                                 </Button>
                               ) : null}
                               {readOnly && canEdit && (

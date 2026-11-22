@@ -132,6 +132,8 @@ class User(Base):
     # Access type: RFI user (forms + responses) and/or Call Center user (full Call Center). Existing users keep both.
     is_rfi_user: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     is_call_center_user: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    # Set once the account has received its Starter templates workspace (deleting it later is respected)
+    templates_seeded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     org_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("organisations.id", ondelete="SET NULL"), nullable=True
     )

@@ -7,11 +7,10 @@ import { createField, CustomField, deleteField, labelOf, Opt, updateField } from
 import { btn, Card, Empty, ErrorBox, FieldLabel, input, Modal, OptSelect, Toast, useMeta } from "@/components/crm/ui";
 
 const LISTS: { key: string; title: string; help: string }[] = [
-  { key: "outcomes", title: "Call outcomes", help: "Picked when logging a call. Drive reports and journey status." },
+  { key: "outcomes", title: "Call outcomes", help: "Picked when logging a call. They drive reports and the person's status." },
   { key: "reasons", title: "Contact reasons", help: "Why the person got in touch." },
   { key: "channels", title: "Channels", help: "How the conversation happened." },
   { key: "contact_types", title: "Contact types", help: "Who the person is." },
-  { key: "lifecycle", title: "Lifecycle stages", help: "Where the person is overall." },
   { key: "interest_stages", title: "Course interest stages", help: "The path from inquiry to enrolled." },
   { key: "lost_reasons", title: "Lost reasons", help: "Required when an interest is marked Lost." },
   { key: "work_kinds", title: "Work item types", help: "Task, callback, case, handoff." },

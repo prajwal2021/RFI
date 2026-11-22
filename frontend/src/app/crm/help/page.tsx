@@ -8,16 +8,17 @@ import { makeMatcher } from "@/lib/search";
 
 const SCREENS: [string, string][] = [
   ["Global search (top bar)", "Type a name, phone (any format), email, R-number or organization. Results show as you type. Always search before creating a contact."],
-  ["Home", "Your day at a glance: your open and overdue work, today's calls, queue sizes, and lists of people who need a follow-up."],
-  ["Contacts", "Everyone who has called, been called or filled an RFI. Filter by journey status to build call lists (e.g. Responded, not contacted)."],
+  ["Take a call", "The purple button at the top. Search the caller, open or add them, and you land on their call form. Start here whenever the phone rings."],
+  ["Home", "Your day at a glance: what is waiting in your team's queue, your own work, and lists of people who need a follow-up."],
+  ["People", "Everyone who has called, been called or filled an RFI. Filter by status to build call lists (e.g. Responded, not contacted)."],
   ["Contact record (360)", "One page per person: highlights, consent, details, related people, course interests, open work, RFIs, and a timeline of everything."],
-  ["Log activity", "On the contact record. Record each call, voicemail, email, text, chat, walk-in, meeting or internal note, with an outcome and notes."],
-  ["Work Queues", "Tasks, callbacks, cases and handoffs. 'My work' is yours; team queues hold unassigned items anyone can pick up."],
+  ["Log this conversation", "On the person's page, in four steps: how you talked, how it went, what it was about, and what happens next (nothing, a callback, or send to the RFI team)."],
+  ["Work", "Callbacks, tasks, cases and hand-offs. 'My work' is yours; each team queue holds unassigned items anyone on the team can pick up. 'Sent by me' shows what happened to things you handed off."],
   ["Team Board", "For supervisors: workload per person, queue depth, overdue counts and stalled items."],
   ["Courses", "The shared course catalog. Opening a Coming-soon course creates follow-up tasks for everyone on its waitlist."],
   ["Setup", "Add custom fields to contacts and review the standard lists (outcomes, reasons, statuses) and what each means."],
-  ["Screen pop (/crm/pop)", "Opened by the phone system (CXone) when a call arrives. Finds the caller by number or offers a pre-filled New Contact."],
-  ["RFI Forms → Responses", "Each RFI response shows the linked person, their journey and call history, plus a 'Send to Call Center' button."],
+  ["Screen pop (/crm/pop)", "Opened by the phone system (CXone) when a call arrives. Finds the caller by number or offers to add them, pre-filled."],
+  ["RFI Forms → Responses", "Each RFI response shows the linked person, their journey and call history, plus an 'Ask Call Center to call' button."],
 ];
 
 const ITEMS: [string, string][] = [
@@ -29,7 +30,7 @@ const ITEMS: [string, string][] = [
   ["Handoff", "Work passed between teams, with a reason and notes. Call Center ↔ RFI Team in both directions."],
   ["Queue", "A team's list of unassigned work. Pick up an item to make it yours; return it to the queue if you cannot finish it."],
   ["Course interest", "A person's interest in one course, moved along the path: Inquiry → Interested → Waitlist → Applied → Enrolled (or Lost)."],
-  ["Journey status", "Calculated for every person from their calls, RFI links, responses and interests. Tells you the next best action."],
+  ["Status", "The one status each person has, worked out automatically from their calls, RFI links, responses and course interests. The person's page says what to do next. RFI response statuses follow it (e.g. a call marks the response Contacted)."],
   ["Relationship", "Links people, e.g. parent ↔ student. A call 'on behalf of' someone is logged on both records."],
   ["Consent & Do not contact", "What the person agreed to (call / email / SMS). Do not contact blocks all outbound outreach."],
   ["Merge", "Combines a duplicate record into this one. History moves over; the duplicate is removed."],
@@ -40,11 +41,11 @@ const ITEMS: [string, string][] = [
 ];
 
 const HOWTO: { title: string; steps: string[] }[] = [
-  { title: "Someone calls for the first time", steps: [
-    "Search their phone number or name in the top bar.",
-    "No match → click 'Create a new contact'. Ask for consent to call, email and text.",
-    "On their record, Log activity: Call · Inbound · outcome · reason · course discussed · notes.",
-    "If they need information by form, click Send to RFI Team and pick the reason; the RFI team sends the form.",
+  { title: "Someone calls (new or returning)", steps: [
+    "Click Take a call and type their phone number or name.",
+    "Pick them from the list, or click Add a new caller and ask for consent to call, email and text.",
+    "Fill in Log this conversation: how it went, what it was about, a short note.",
+    "Under What happens next, choose Send to the RFI team if they need a form. One Save logs the call and creates the request.",
   ] },
   { title: "Someone calls who already filled an RFI", steps: [
     "Search them; the journey badge shows 'Responded…'.",
@@ -57,24 +58,29 @@ const HOWTO: { title: string; steps: string[] }[] = [
     "Log the call on the parent and choose 'Calling on behalf of' the student; it appears on both records.",
   ] },
   { title: "Caller wants a call back later", steps: [
-    "Log the call with outcome 'Callback requested' and set 'Schedule callback'.",
-    "A callback task appears in your My Work at that time.",
+    "Log the call with outcome 'Callback requested'; What happens next switches to Call them back.",
+    "Pick the date and time. The callback appears in My work, and opening it takes you straight to the call form.",
   ] },
   { title: "Something needs fixing (billing, technical, records)", steps: [
-    "Click New Case on the contact, choose a category and priority.",
+    "On the person, click More → New case, choose a category and priority.",
     "Leave 'Assigned to' empty to send it to the team queue, or assign it.",
     "Close it with a written resolution when solved.",
   ] },
   { title: "Pass someone to the RFI team", steps: [
-    "Click 'Send to RFI Team' on the contact. Pick a reason (e.g. Send this person an RFI) and add notes.",
-    "It lands in the RFI Team queue. Track it under Work Queues → Sent by me.",
+    "Either choose Send to the RFI team when you log the call, or click Send to RFI team on the person.",
+    "It lands in the RFI Team queue. When they send the form, the request closes and you get a notification. Track it under Work → Sent by me.",
+  ] },
+  { title: "RFI team: answer a 'send this person an RFI' request", steps: [
+    "Open the request from Home or Work → RFI Team queue.",
+    "Click Send RFI link, pick the form, and copy the personal link into an email (or use Open in my email app).",
+    "The request closes by itself and the Call Center is told. The person's page shows when they open and submit it.",
   ] },
   { title: "RFI team wants the Call Center to phone a respondent", steps: [
-    "In RFI Forms → Responses, open the response and click 'Send to Call Center'.",
-    "It lands in the Call Center queue with the person and response attached.",
+    "In RFI Forms → Responses, open the response and click 'Ask Call Center to call'.",
+    "It lands in the Call Center queue with their answers attached. When an agent logs a call where they reach the person, it closes and you are told.",
   ] },
   { title: "Work a follow-up list", steps: [
-    "Home → People to follow up, or Contacts → filter by journey status.",
+    "Home → People to follow up, or People → filter by status.",
     "Start with 'Responded, not contacted', then 'RFI opened, not submitted'.",
   ] },
   { title: "Caller asks us to stop contacting them", steps: [
@@ -82,7 +88,7 @@ const HOWTO: { title: string; steps: string[] }[] = [
     "Outbound calls, RFI links and texts are blocked from then on; inbound calls can still be logged.",
   ] },
   { title: "Found a duplicate", steps: [
-    "Open the record you want to keep → merge icon → find the duplicate → Merge.",
+    "Open the record you want to keep → More → Merge a duplicate → find the duplicate → Merge.",
   ] },
   { title: "A coming-soon course opens", steps: [
     "Courses → edit → set status to Available now.",

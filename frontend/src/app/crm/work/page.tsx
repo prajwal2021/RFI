@@ -8,14 +8,11 @@ import { btn, Card, Empty, ErrorBox, input, useMeta } from "@/components/crm/ui"
 import { WorkDrawer, WorkItemDialog, WorkRow, WorkTableHead } from "@/components/crm/dialogs";
 
 const VIEWS = [
-  { key: "mine", label: "My work", help: "Everything assigned to you." },
-  { key: "queue:call_center", label: "Call Center queue", help: "Unassigned Call Center items. Pick one up to work it." },
-  { key: "queue:rfi", label: "RFI Team queue", help: "Unassigned items for the RFI team, mostly handoffs from the Call Center." },
-  { key: "queue:escalations", label: "Escalations", help: "Unassigned items needing a supervisor." },
-  { key: "team:call_center", label: "All Call Center", help: "Every open Call Center item, assigned or not." },
-  { key: "team:rfi", label: "All RFI Team", help: "Every open RFI Team item." },
-  { key: "created", label: "Sent by me", help: "Items you created or handed off, so you can see what happened to them." },
-  { key: "all", label: "Everything", help: "All items you can see." },
+  { key: "mine", label: "My work", help: "Everything assigned to you, overdue first." },
+  { key: "queue:call_center", label: "Call Center queue", help: "Waiting for any agent: calls the RFI team asked for, new cases. Pick one up to work it." },
+  { key: "queue:rfi", label: "RFI Team queue", help: "Waiting for the RFI team, mostly 'send this person a form' from the Call Center." },
+  { key: "created", label: "Sent by me", help: "Things you handed to someone else, so you can see what happened to them." },
+  { key: "all", label: "Everything", help: "All items you can see, assigned or not." },
 ];
 
 function WorkInner() {
@@ -49,8 +46,8 @@ function WorkInner() {
     <div className="max-w-7xl mx-auto space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-[20px] font-bold">Work Queues</h1>
-          <p className="text-[13px] text-[#4f483d]">Tasks, callbacks, cases and handoffs. Unassigned items wait in a team queue until someone picks them up.</p>
+          <h1 className="text-[20px] font-bold">Work</h1>
+          <p className="text-[13px] text-[#4f483d]">Callbacks, tasks, cases and hand-offs between teams. Anything not assigned waits in its team&apos;s queue until someone picks it up.</p>
         </div>
         <button onClick={() => setCreating(true)} className={btn.brand}><Plus className="h-4 w-4" /> New item</button>
       </div>

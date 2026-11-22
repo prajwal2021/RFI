@@ -28,7 +28,6 @@ function ContactsInner() {
   const [q, setQ] = useState(sp.get("q") || "");
   const [query, setQuery] = useState(sp.get("q") || "");
   const [journey, setJourney] = useState(sp.get("journey") || "");
-  const [lifecycle, setLifecycle] = useState("");
   const [ctype, setCtype] = useState("");
   const [owner, setOwner] = useState("");
   const [offset, setOffset] = useState(0);
@@ -48,14 +47,14 @@ function ContactsInner() {
     return () => clearTimeout(t);
   }, [q]);
 
-  useEffect(() => setOffset(0), [query, journey, lifecycle, ctype, owner]);
+  useEffect(() => setOffset(0), [query, journey, ctype, owner]);
 
   useEffect(() => {
     setData(null);
-    listContacts({ q: query, journey, lifecycle, contact_type: ctype, owner, limit: PAGE, offset })
+    listContacts({ q: query, journey, contact_type: ctype, owner, limit: PAGE, offset })
       .then(setData)
       .catch((e) => setError(e.message));
-  }, [query, journey, lifecycle, ctype, owner, offset]);
+  }, [query, journey, ctype, owner, offset]);
 
   const sel = (value: string, set: (v: string) => void, opts: { value: string; label: string }[], all: string) => (
     <select value={value} onChange={(e) => set(e.target.value)} className={`${input} !w-auto min-w-[150px]`}>
@@ -68,10 +67,10 @@ function ContactsInner() {
     <div className="max-w-7xl mx-auto space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-[20px] font-bold">Contacts</h1>
+          <h1 className="text-[20px] font-bold">People</h1>
           <p className="text-[13px] text-[#4f483d]">Everyone who has called, been called or filled an RFI. Always search before creating someone new.</p>
         </div>
-        <button onClick={() => setShowNew(true)} className={btn.brand}><UserPlus className="h-4 w-4" /> New Contact</button>
+        {meta && !meta.me.rfi_only && <button onClick={() => setShowNew(true)} className={btn.brand}><UserPlus className="h-4 w-4" /> Add person</button>}
       </div>
       <ErrorBox text={error || metaError} />
 
@@ -79,8 +78,7 @@ function ContactsInner() {
         help={journey && meta ? meta.journey.find((j) => j.value === journey)?.description : "Use the filters to build a call list, e.g. everyone who responded but was never contacted."}>
         <div className="flex flex-wrap gap-2 p-3 border-b border-[#ebe2d0] bg-[#fbf8f2]">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, phone, email, R-number, organization…" className={`${input} flex-1 min-w-[220px]`} />
-          {meta && sel(journey, setJourney, meta.journey, "Any journey status")}
-          {meta && sel(lifecycle, setLifecycle, meta.lifecycle, "Any lifecycle")}
+          {meta && sel(journey, setJourney, meta.journey, "Any status")}
           {meta && sel(ctype, setCtype, meta.contact_types, "Any type")}
           {sel(owner, setOwner, [{ value: "me", label: "Owned by me" }, { value: "none", label: "No owner" }], "Any owner")}
         </div>
@@ -88,7 +86,7 @@ function ContactsInner() {
           <Empty text="Loading…" />
         ) : data.rows.length === 0 ? (
           <Empty text={query ? `Nobody matches "${query}".` : "No contacts match these filters."}>
-            {query && <button onClick={() => setShowNew(true)} className={btn.brand}><UserPlus className="h-4 w-4" /> Create &ldquo;{query}&rdquo;</button>}
+            {query && !meta.me.rfi_only && <button onClick={() => setShowNew(true)} className={btn.brand}><UserPlus className="h-4 w-4" /> Create &ldquo;{query}&rdquo;</button>}
           </Empty>
         ) : (
           <div className="overflow-x-auto">
@@ -98,8 +96,8 @@ function ContactsInner() {
                   <th className="px-3 py-2 font-semibold">Name</th>
                   <th className="px-3 py-2 font-semibold">Phone</th>
                   <th className="px-3 py-2 font-semibold">Email</th>
-                  <th className="px-3 py-2 font-semibold">Type / lifecycle</th>
-                  <th className="px-3 py-2 font-semibold">Journey</th>
+                  <th className="px-3 py-2 font-semibold">Who</th>
+                  <th className="px-3 py-2 font-semibold">Status</th>
                   <th className="px-3 py-2 font-semibold">Owner</th>
                   <th className="px-3 py-2 font-semibold">Last activity</th>
                 </tr>
@@ -118,7 +116,7 @@ function ContactsInner() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{c.phone || "—"}</td>
                     <td className="px-3 py-2 truncate max-w-[220px]">{c.email || "—"}</td>
-                    <td className="px-3 py-2 text-[12px]">{labelOf(meta.contact_types, c.contact_type)}<div className="text-[#6f6654]">{labelOf(meta.lifecycle, c.lifecycle)}</div></td>
+                    <td className="px-3 py-2 text-[12px]">{labelOf(meta.contact_types, c.contact_type)}</td>
                     <td className="px-3 py-2"><JourneyBadge value={c.journey} label={c.journey_label} help={c.journey_help} /></td>
                     <td className="px-3 py-2 text-[12px] truncate max-w-[160px]">{c.owner_email || "—"}</td>
                     <td className="px-3 py-2 text-[12px] text-[#4f483d] whitespace-nowrap">{c.last_activity_at ? formatDistanceToNow(new Date(c.last_activity_at), { addSuffix: true }) : "—"}</td>
@@ -139,7 +137,7 @@ function ContactsInner() {
         )}
       </Card>
 
-      {showNew && meta && (
+      {showNew && meta && !meta.me.rfi_only && (
         <NewContactDialog
           meta={meta}
           initial={guessFromQuery(q)}

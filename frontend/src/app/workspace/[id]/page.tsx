@@ -17,13 +17,6 @@ import FolderSidebar from "@/components/folder-sidebar";
 import RfiThumbnail from "@/components/rfi-thumbnail";
 import { startRfiDrag } from "@/lib/dnd";
 
-const STATUS_VARIANT: Record<string, "draft" | "open" | "answered" | "closed"> = {
-  draft: "draft",
-  open: "open",
-  answered: "answered",
-  closed: "closed",
-};
-
 export default function WorkspacePage() {
   const { canEditForms } = useAccess();
   const router = useRouter();
@@ -155,44 +148,39 @@ export default function WorkspacePage() {
                     <div className="flex-1 min-w-0 mr-4">
                       <div className="flex items-center gap-3 mb-1">
                         <h4 className="font-medium truncate">{rfi.subject}</h4>
-                        <Badge variant={STATUS_VARIANT[rfi.status]}>{rfi.status}</Badge>
-                        {rfi.content?.formDefinition && (
-                          <Badge variant="draft" className="bg-indigo-100 text-indigo-700 text-xs">SS Form</Badge>
-                        )}
-                        {rfi.content?.surveyDefinition && (
-                          <Badge variant="draft" className="bg-emerald-100 text-emerald-700 text-xs">SurveyJS</Badge>
-                        )}
-                        {rfi.is_published && (
-                          <Badge variant="open" className="bg-green-100 text-green-700 text-xs">
-                            <Globe className="h-3 w-3 mr-1" /> Live
-                          </Badge>
+                        {rfi.is_published ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-forest-100 text-forest-800 px-2 py-0.5 text-xs font-semibold"><Globe className="h-3 w-3" /> Live</span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-sand-200 text-forest-800/70 px-2 py-0.5 text-xs font-semibold">Draft</span>
                         )}
                       </div>
                       <div className="text-sm text-gray-500">
                         {rfi.created_by} · {format(new Date(rfi.created_at), "MMM d, yyyy")}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       {rfi.is_published && rfi.publish_key ? (
-                        <Button variant="ghost" size="icon" title="Copy link" onClick={() => handleCopyLink(rfi)}>
-                          {copiedId === rfi.id ? <span className="text-xs text-green-600">Copied</span> : <Copy className="h-4 w-4 text-green-600" />}
+                        <Button variant="outline" size="sm" title="Copy the public link" onClick={() => handleCopyLink(rfi)}>
+                          <Copy className="h-3.5 w-3.5 mr-1.5" />{copiedId === rfi.id ? "Copied" : "Copy link"}
                         </Button>
-                      ) : rfi.content ? (
-                        <Button variant="ghost" size="icon" title="Publish" onClick={() => handleQuickPublish(rfi)}>
-                          <Globe className="h-4 w-4 text-gray-400" />
+                      ) : rfi.content && canEditForms ? (
+                        <Button variant="outline" size="sm" title="Publish and copy the public link" onClick={() => handleQuickPublish(rfi)}>
+                          <Globe className="h-3.5 w-3.5 mr-1.5" />Publish
                         </Button>
                       ) : null}
-                      <Button variant="ghost" size="icon" title="View" onClick={() => router.push(`/rfi/${rfi.id}`)}>
+                      <Button variant="ghost" size="icon" title="Preview and responses" onClick={() => router.push(`/rfi/${rfi.id}`)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {editPath && (
+                      {editPath && canEditForms && (
                         <Button variant="ghost" size="icon" title="Edit" onClick={() => router.push(editPath)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(rfi.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {canEditForms && (
+                        <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(rfi.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );

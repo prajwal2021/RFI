@@ -24,23 +24,23 @@ export default function ResponseContactCard({ submissionId, contactId, rfiId }: 
   }, [contactId]);
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2">
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-sky-800 font-semibold">
-        <Headset className="h-3.5 w-3.5" /> Call Center
+    <div className="rounded-xl border border-[#cfe3d6] bg-[#eef5f0] p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[#163f2d] font-bold">
+        <Headset className="h-3.5 w-3.5" /> This person in the Call Center
       </div>
       {!contactId ? (
-        <p className="text-xs text-slate-500">This response could not be matched to a person (no name, email or phone was given).</p>
+        <p className="text-xs text-[#6f6654]">This response could not be matched to a person (no name, email or phone was given).</p>
       ) : failed ? (
-        <p className="text-xs text-slate-500">This person is in a Call Center list you cannot see.</p>
+        <p className="text-xs text-[#6f6654]">This person is in a Call Center list you cannot see.</p>
       ) : !s ? (
-        <p className="text-xs text-slate-400">Loading…</p>
+        <p className="text-xs text-[#9a8f78]">Loading…</p>
       ) : (
         <>
           <div className="flex items-center justify-between gap-2">
-            <a href={`/rfi/crm/contacts/${contactId}`} className="text-sm font-semibold text-sky-800 hover:underline truncate">{s.contact.name}</a>
+            <a href={`/rfi/crm/contacts/${contactId}`} className="text-sm font-semibold text-[#1b5038] hover:underline truncate">{s.contact.name}</a>
             <JourneyBadge value={s.contact.journey} label={s.contact.journey_label} help={s.contact.journey_help} />
           </div>
-          <div className="text-xs text-slate-600">
+          <div className="text-xs text-[#4f483d]">
             {s.calls} call{s.calls === 1 ? "" : "s"} · {s.open_work} open item{s.open_work === 1 ? "" : "s"}
             {s.last_interaction && meta && (
               <> · last {labelOf(meta.channels, s.last_interaction.channel).toLowerCase()} {formatDistanceToNow(new Date(s.last_interaction.at), { addSuffix: true })}
@@ -53,10 +53,10 @@ export default function ResponseContactCard({ submissionId, contactId, rfiId }: 
       <button
         onClick={() => setHandoff(true)}
         disabled={!meta || s?.contact.do_not_contact}
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-sky-300 bg-white text-xs font-medium text-sky-800 hover:bg-sky-100 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#1b5038] text-xs font-semibold text-white shadow-sm hover:bg-[#163f2d] disabled:opacity-50"
         title="Ask the Call Center to phone this person about their response"
       >
-        <PhoneForwarded className="h-3.5 w-3.5" /> Send to Call Center
+        <PhoneForwarded className="h-3.5 w-3.5" /> Ask Call Center to call
       </button>
       {handoff && meta && (
         <WorkItemDialog

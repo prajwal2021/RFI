@@ -27,7 +27,7 @@ from app.crm_models import (
     WorkItemComment,
 )
 from app.database import get_db
-from app.models import RFI, RFISubmission, User, Workspace
+from app.models import RFI, RFISubmission, SubmissionEvent, User, Workspace
 
 router = APIRouter(prefix="/api/crm", tags=["call center"])
 
@@ -80,6 +80,46 @@ async def _assignable(db: AsyncSession, user: User, owner_id: UUID | None) -> Us
     if not u or (not user.is_admin and u.id != user.id and (user.org_id is None or u.org_id != user.org_id)):
         raise HTTPException(status_code=400, detail="That person cannot be assigned")
     return u
+
+
+# RFI response statuses in the order a lead moves through them; Call Center activity only ever moves them forward.
+SUBMISSION_RANK = ["new", "contacted", "interested", "applied", "enrolled"]
+STAGE_TO_SUBMISSION = {"interested": "interested", "applied": "applied", "enrolled": "enrolled"}
+
+
+async def _advance_submissions(db: AsyncSession, contact_id: UUID, target: str, user: User) -> None:
+    """Keep the RFI team's response status in step with what the Call Center did, so both teams see one status."""
+    subs = (await db.execute(select(RFISubmission).where(RFISubmission.contact_id == contact_id))).scalars().all()
+    for s in subs:
+        if s.status in SUBMISSION_RANK and SUBMISSION_RANK.index(s.status) < SUBMISSION_RANK.index(target):
+            db.add(SubmissionEvent(submission_id=s.id, actor_email=user.email, kind="status", data={"from": s.status, "to": target, "via": "call_center"}))
+            s.status = target
+
+
+async def _create_handoff(db: AsyncSession, user: User, c: Contact, team: str, category: str, title: str, description: str) -> tuple[WorkItem, bool]:
+    """Send a person to a team's queue. If one is already open for that team, add the note to it instead of duplicating.
+    Returns (item, created)."""
+    open_item = (await db.execute(select(WorkItem).where(
+        WorkItem.contact_id == c.id, WorkItem.kind == "handoff", WorkItem.team == team, WorkItem.status.in_(OPEN_STATUSES)).limit(1))).scalar_one_or_none()
+    team_label = dict((t["value"], t["label"]) for t in TEAMS)[team]
+    link_for = lambda w: f"/crm/work?item={w.id}"  # noqa: E731
+    if open_item:
+        db.add(WorkItemComment(work_item_id=open_item.id, author_email=user.email, kind="comment", text=f"{title}\n{description}".strip()))
+        for uid in {open_item.owner_id, open_item.created_by_id}:
+            notify(db, uid, "comment", f"New note on #{open_item.number} {open_item.title}", f"{user.email}: {description[:200]}", link_for(open_item), user.id)
+        open_item.updated_at = now()
+        return open_item, False
+    w = WorkItem(
+        number=await next_work_number(db), org_id=c.org_id if c.org_id is not None else user.org_id, contact_id=c.id, kind="handoff", team=team,
+        category=category, title=title[:255], description=description, priority="normal", due_at=add_business_days(now(), 2),
+        created_by_id=user.id, created_by_email=user.email, status="open",
+    )
+    db.add(w)
+    await db.flush()
+    db.add(WorkItemComment(work_item_id=w.id, author_email=user.email, kind="system", text=f"Created (handoff) for {team_label}, waiting in the queue"))
+    record(db, user, "work_created", "work_item", w.id, f"#{w.number} {w.title}", {"kind": "handoff", "team": team})
+    await notify_team(db, w.org_id, team, f"New in the {team_label} queue: #{w.number} {w.title}", f"From {user.email}", link_for(w), user.id)
+    return w, True
 
 
 def contact_out(c: Contact, journey: str | None = None, owner_email: str | None = None) -> dict:
@@ -569,6 +609,10 @@ class InteractionIn(BaseModel):
     # quick follow-ups created in the same step
     callback_at: datetime | None = None
     mark_do_not_contact: bool = False
+    # pass the person to the RFI team in the same step (e.g. "send them the program form")
+    send_to_rfi: bool = False
+    handoff_reason: str | None = None
+    handoff_note: str = Field("", max_length=8000)
 
 
 @router.post("/contacts/{cid}/interactions", status_code=201)
@@ -578,14 +622,19 @@ async def log_interaction(cid: UUID, body: InteractionIn, user: User = Depends(r
     _check(body.direction, DIRECTIONS, "direction")
     _check(body.outcome, OUTCOMES, "outcome")
     _check(body.reason, REASONS, "reason")
+    if body.send_to_rfi:
+        _check(body.handoff_reason, HANDOFF_REASONS, "handoff reason")
     if body.direction == "outbound" and c.do_not_contact and body.channel != "note":
         raise HTTPException(status_code=409, detail="This person asked not to be contacted. Outbound contact is blocked.")
     if body.on_behalf_of_id:
         await _get_contact(db, user, body.on_behalf_of_id)
     when = body.occurred_at or now()
     # A logged call answers the Call Center handoff(s) waiting for this person: close them (a no-answer keeps them open).
+    reached = body.channel not in ("note",) and body.outcome not in (None, "no_answer", "left_voicemail", "busy", "wrong_number")
+    if reached:
+        await _advance_submissions(db, c.id, "contacted", user)
     if body.channel in ("call", "voicemail") and body.outcome not in ("no_answer", "left_voicemail", "busy", "wrong_number"):
-        waiting = (await db.execute(select(WorkItem).where(
+        waiting =(await db.execute(select(WorkItem).where(
             WorkItem.contact_id == c.id, WorkItem.kind == "handoff", WorkItem.team == "call_center", WorkItem.status.in_(OPEN_STATUSES)))).scalars().all()
         label = dict((o["value"], o["label"]) for o in OUTCOMES).get(body.outcome or "", "call logged")
         for h in waiting:
@@ -621,11 +670,17 @@ async def log_interaction(cid: UUID, body: InteractionIn, user: User = Depends(r
             c.do_not_contact = True
             c.consent_sms = c.consent_email = c.consent_call = False
             add_event(db, c.id, "consent", user.email, {"do_not_contact": {"from": "False", "to": "True"}})
+    handoff = None
+    if body.send_to_rfi:
+        reason = body.handoff_reason or "send_rfi"
+        label = dict((o["value"], o["label"]) for o in HANDOFF_REASONS)[reason]
+        summary = "\n".join(x for x in (body.handoff_note.strip(), f"From the call: {body.notes.strip()}" if body.notes.strip() else "") if x)
+        handoff, _ = await _create_handoff(db, user, c, "rfi", reason, f"{label}: {contact_name(c)}", summary)
     if c.owner_id is None:
         c.owner_id = user.id  # first agent to work a person becomes the owner
     c.updated_at = now()
     await db.commit()
-    return {"ok": True, "id": str(i.id)}
+    return {"ok": True, "id": str(i.id), "handoff_number": handoff.number if handoff else None}
 
 
 @router.delete("/interactions/{iid}", status_code=204)
@@ -694,6 +749,8 @@ async def update_interest(iid: UUID, body: InterestPatch, user: User = Depends(r
         add_event(db, c.id, "stage", user.email, {"course": course.name, "from": it.stage, "to": body.stage, "reason": body.lost_reason})
         it.stage = body.stage
         _bump_lifecycle(c, body.stage)
+        if body.stage in STAGE_TO_SUBMISSION:
+            await _advance_submissions(db, c.id, STAGE_TO_SUBMISSION[body.stage], user)
     if body.lost_reason is not None:
         _check(body.lost_reason or None, LOST_REASONS, "lost reason")
         it.lost_reason = body.lost_reason or None
@@ -730,7 +787,8 @@ async def sendable_rfis(user: User = Depends(require_user), db: AsyncSession = D
 
 
 @router.post("/contacts/{cid}/invitations", status_code=201)
-async def create_invitation(cid: UUID, body: InviteIn, user: User = Depends(require_call_center_staff), db: AsyncSession = Depends(get_db)):
+async def create_invitation(cid: UUID, body: InviteIn, user: User = Depends(require_user), db: AsyncSession = Depends(get_db)):
+    """A personal RFI link. Usually the RFI team creates it when the Call Center asks them to send a form."""
     c = await _get_contact(db, user, cid)
     if c.do_not_contact:
         raise HTTPException(status_code=409, detail="This person asked not to be contacted.")
@@ -745,8 +803,18 @@ async def create_invitation(cid: UUID, body: InviteIn, user: User = Depends(requ
     db.add(inv)
     await db.flush()
     record(db, user, "rfi_invitation_created", "contact", c.id, contact_name(c), {"rfi": rfi.subject})
+    # Sending the form answers a "send this person an RFI" request: close it and tell whoever asked.
+    asks = (await db.execute(select(WorkItem).where(
+        WorkItem.contact_id == c.id, WorkItem.kind == "handoff", WorkItem.team == "rfi", WorkItem.category == "send_rfi",
+        WorkItem.status.in_(OPEN_STATUSES)))).scalars().all()
+    for h in asks:
+        h.status, h.closed_at = "done", now()
+        h.owner_id = h.owner_id or user.id
+        h.resolution = h.resolution or f"Personal RFI link created: {rfi.subject}"
+        db.add(WorkItemComment(work_item_id=h.id, author_email=user.email, kind="system", text=f"Closed automatically: {user.email} created a personal link to \"{rfi.subject}\""))
+        notify(db, h.created_by_id, "status", f"#{h.number} is done: {h.title}", f"{user.email} sent \"{rfi.subject}\"", f"/crm/work?item={h.id}", user.id)
     await db.commit()
-    return {"id": str(inv.id), "token": inv.token, "path": f"/rfi/public/{rfi.publish_key}?i={inv.token}"}
+    return {"id": str(inv.id), "token": inv.token, "path": f"/rfi/public/{rfi.publish_key}?i={inv.token}", "closed_requests": [h.number for h in asks]}
 
 
 # ───────────────────────── work items (tasks, callbacks, cases, handoffs) ─────────────────────────

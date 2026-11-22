@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ClipboardCheck, Grid3x3, Headset, Search, UserPlus } from "lucide-react";
+import { ClipboardCheck, Grid3x3, Headset, PhoneIncoming, Search } from "lucide-react";
 import ProfileMenu from "@/components/profile-menu";
 import { Contact, listContacts } from "@/lib/crm";
 import { JourneyBadge } from "@/components/crm/ui";
@@ -14,15 +14,15 @@ const RFI_USER_HIDDEN = ["/crm/team", "/crm/courses", "/crm/settings"];
 
 const TABS = [
   { href: "/crm", label: "Home" },
-  { href: "/crm/contacts", label: "Contacts" },
-  { href: "/crm/work", label: "Work Queues" },
+  { href: "/crm/contacts", label: "People" },
+  { href: "/crm/work", label: "Work" },
   { href: "/crm/team", label: "Team Board" },
   { href: "/crm/courses", label: "Courses" },
   { href: "/crm/settings", label: "Setup" },
   { href: "/crm/help", label: "Help" },
 ];
 
-function GlobalSearch() {
+function GlobalSearch({ rfiOnly }: { rfiOnly: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<Contact[]>([]);
@@ -69,9 +69,9 @@ function GlobalSearch() {
           {rows.length === 0 ? (
             <div className="px-3 py-3 text-[13px] text-[#6f6654]">
               No matches.{" "}
-              <button className="text-[#1b5038] hover:underline" onClick={() => { setOpen(false); router.push(`/crm/contacts?new=1&q=${encodeURIComponent(q.trim())}`); }}>
-                Create a new contact
-              </button>
+              {!rfiOnly && <button className="text-[#1b5038] hover:underline" onClick={() => { setOpen(false); router.push(`/crm/call?q=${encodeURIComponent(q.trim())}`); }}>
+                Add them as a new person
+              </button>}
             </div>
           ) : (
             rows.map((c) => (
@@ -128,10 +128,10 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
             <span className="hidden lg:inline text-[16px] font-bold tracking-tight text-white">Call <span className="font-medium text-forest-200">Center</span></span>
           </Link>
           <div className="flex-1 flex justify-center min-w-0">
-            <GlobalSearch />
+            <GlobalSearch rfiOnly={rfiOnly} />
           </div>
-          {!rfiOnly && <button onClick={() => router.push("/crm/contacts?new=1")} className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-[#7c1fff] text-[13px] font-semibold text-white shadow-md shadow-[#7c1fff]/30 transition hover:bg-[#6a12e6]" title="New contact">
-            <UserPlus className="h-4 w-4" /> New
+          {!rfiOnly && <button onClick={() => router.push("/crm/call")} className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-[#7c1fff] text-[13px] font-semibold text-white shadow-md shadow-[#7c1fff]/30 transition hover:bg-[#6a12e6]" title="Someone is on the phone: find them and log the call">
+            <PhoneIncoming className="h-4 w-4" /> Take a call
           </button>}
           <Link href="/" className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-medium text-sand-100 transition hover:bg-white/10 hover:text-white" title="Switch to RFI Forms">
             <Grid3x3 className="h-4 w-4" /> RFI Forms
@@ -155,13 +155,6 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
           </Link>
         </nav>
       </header>
-      {rfiOnly && (
-        <div className="px-3 sm:px-5 pt-4">
-          <div className="rounded-xl border border-[#cfe3d6] bg-[#eef5f0] px-4 py-2.5 text-[12px] text-[#163f2d]">
-            <b>RFI user view.</b> You can read every person and every call the Call Center has taken, with the notes (open a person to see their timeline). You work from the RFI Team queue and your own hand-offs. Use <b>Send to Call Center</b> on a person to ask for a call.
-          </div>
-        </div>
-      )}
       <main className="p-3 sm:p-5">{children}</main>
     </div>
   );

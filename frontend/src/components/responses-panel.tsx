@@ -17,14 +17,9 @@ import DateRangePicker from "@/components/date-range-picker";
 
 
 function kindOf(rfi?: RFI): { label: string; cls: string } | null {
-  if (!rfi?.content) return null;
-  if (rfi.content.surveyDefinition) {
-    return rfi.content.surveyEditor === "clone"
-      ? { label: "SurveyJS Clone", cls: "bg-teal-100 text-teal-700" }
-      : { label: "SurveyJS", cls: "bg-emerald-100 text-emerald-700" };
-  }
-  if (rfi.content.formDefinition) return { label: "SS Form", cls: "bg-indigo-100 text-indigo-700" };
-  return null;
+  // Whether the form is still taking responses is what matters here, not which editor built it
+  if (!rfi) return null;
+  return rfi.is_published ? { label: "Live", cls: "bg-forest-100 text-forest-800" } : { label: "Closed", cls: "bg-sand-200 text-forest-800/70" };
 }
 
 function localYmd(iso: string): string {
